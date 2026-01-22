@@ -1,0 +1,21 @@
+[tools]
+sops = "3"
+age = "1"
+node = "24"
+pnpm = "10"
+
+[settings.sops]
+age_key_file = "{{ config_root }}/prod.age-key.txt"
+
+[env]
+_.file = ["prodsecret.env.yaml"]
+
+OTEL_RESOURCE_ATTRIBUTES="service.name=vantage.monolith,service.version=0.0.1"
+### OPENTELEMETRY
+OTEL_TRACES_EXPORTER="otlp"
+OTEL_EXPORTER_OTLP_ENDPOINT="https://ingest.us.signoz.cloud:443"
+OTEL_NODE_RESOURCE_DETECTORS="env,host,os"
+OTEL_SERVICE_NAME="vantage-monolith-signoz-testing"
+OTEL_EXPORTER_OTLP_LOGS_ENDPOINT="https://ingest.us.signoz.cloud:443/v1/logs"
+# OTEL_EXPORTER_OTLP_HEADERS="signoz-ingestion-key={{get_env(name='SIGNOZ_KEY')}}"
+# NODE_OPTIONS="--import @opentelemetry/auto-instrumentations-node/register"

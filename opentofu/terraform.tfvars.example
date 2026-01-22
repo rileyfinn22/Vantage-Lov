@@ -1,0 +1,19 @@
+project_id                    = "vantage-471500"
+region                        = "us-west1"
+artifact_registry_repository  = "vantage-app"
+
+github_owner  = "your-github-username"
+github_repo   = "your-repo-name"
+github_branch = "main"
+
+cloud_run_service_name = "vantage-app"
+cloud_run_min_instances = 0
+cloud_run_max_instances = 10
+cloud_run_memory        = "512Mi"
+cloud_run_cpu           = "1"
+
+database_url = "postgres://user:password@host:5432/dbname"
+
+environment_variables = {
+  NODE_ENV = "production"
+}

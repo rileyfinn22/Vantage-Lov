@@ -1,0 +1,25 @@
+transcript = """
+Salesperson: Good morning! I'm calling from DataVault regarding our backup solutions.
+
+Prospect: Hi. Look, I'm in the middle of something right now.
+
+Salesperson: This will only take a few minutes! I wanted to talk to you about our enterprise backup solution. How are you currently handling your data backups?
+
+Prospect: We have something in place. I really need to-
+
+Salesperson: That's great! I'm sure you do. But let me ask you - how confident are you that you could recover all your data if something happened today?
+
+Prospect: Pretty confident. Listen, this really isn't a good time.
+
+Salesperson: I totally understand you're busy. Everyone is! That's actually why I'm calling. Our solution automates everything so you don't have to think about backups at all. Can you tell me about your current setup?
+
+Prospect: Like I said, we have something. I don't have time to discuss this right now.
+
+Salesperson: Okay, I hear you. But just one quick question - who on your team handles IT decisions? Would they be the right person to talk to about this?
+
+Prospect: I need to go. Please don't call back.
+"""
+
+salesperson_context = "Inside Sales Rep, 8 months experience, B2B technology"
+
+expected_flag_title = "Ignoring Prospect's Time Constraints - Pushing Through Resistance"

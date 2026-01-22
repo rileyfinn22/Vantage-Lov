@@ -1,0 +1,1 @@
+ALTER TABLE "battle_cards" ADD CONSTRAINT "battle_cards_linked_scenario_id_training_scenarios_id_fk" FOREIGN KEY ("linked_scenario_id") REFERENCES "public"."training_scenarios"("id") ON DELETE set null ON UPDATE no action;

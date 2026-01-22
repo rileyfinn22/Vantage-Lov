@@ -1,0 +1,29 @@
+transcript = """
+Salesperson: Thanks for your interest in our software. Based on what you told me about your team size and needs, I think our Professional plan would be perfect. It's $5,000 per month.
+
+Prospect: Wow, that's quite a bit more than we budgeted. We were thinking more like $2,000 per month.
+
+Salesperson: Well, our pricing is very competitive for the market. Most of our competitors charge even more.
+
+Prospect: I understand, but we're a small business. That's just out of our range right now.
+
+Salesperson: I really think you need the Professional plan to get the features you mentioned. The Basic plan at $2,500 won't have everything.
+
+Prospect: What about the Basic plan? What features does it have?
+
+Salesperson: It has the core features, but you're missing out on the analytics dashboard, advanced reporting, and priority support. You really need those.
+
+Prospect: Maybe we can start with Basic and upgrade later?
+
+Salesperson: I suppose, but most customers regret not starting with Professional. They end up upgrading within 3 months anyway and miss out on data continuity.
+
+Prospect: I think we need to discuss this internally and see what our budget allows.
+
+Salesperson: Sure, but our Q1 pricing expires at the end of the month. After that, prices go up 15%.
+
+Prospect: Okay, I'll get back to you.
+"""
+
+salesperson_context = "Account Executive, 2 years experience, B2B SaaS sales"
+
+expected_flag_title = "Poor Objection Handling - Failed to Explore Budget Constraints"

@@ -1,0 +1,5 @@
+ALTER TABLE training_sessions_completed DROP CONSTRAINT IF EXISTS unique_in_progress_session;
+--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS unique_in_progress_session_idx
+ON training_sessions_completed (salesperson_id, scenario_id)
+WHERE status = 'in_progress';

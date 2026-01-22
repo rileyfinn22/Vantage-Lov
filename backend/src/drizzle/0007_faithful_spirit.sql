@@ -1,0 +1,1 @@
+ALTER TABLE "salespeople" ALTER COLUMN "avatar" DROP NOT NULL;

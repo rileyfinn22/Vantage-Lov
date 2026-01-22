@@ -1,0 +1,30 @@
+[tools]
+uv = "latest"
+
+[tasks.test]
+run = "uv run python test_runner.py"
+description = "Run flag extractor tests"
+
+[tasks.train]
+run = "uv run python train.py"
+description = "Train and optimize flag extraction prompts with DSPy"
+
+[tasks."train:light"]
+run = "uv run python train.py --mode light"
+description = "Quick training with light optimization (fastest)"
+
+[tasks."train:medium"]
+run = "uv run python train.py --mode medium"
+description = "Balanced training with medium optimization"
+
+[tasks."train:heavy"]
+run = "uv run python train.py --mode heavy"
+description = "Thorough training with heavy optimization (slowest, best results)"
+
+[tasks."train:multi"]
+run = "uv run python train.py --module-type multi"
+description = "Train multi-stage flag extractor"
+
+[tasks."train:openai"]
+run = "uv run python train.py --provider openai"
+description = "Train using OpenAI GPT models (requires OPENAI_API_KEY)"

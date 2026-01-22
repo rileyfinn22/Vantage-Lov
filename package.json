@@ -1,0 +1,27 @@
+{
+  "name": "vantage-ai",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npm run --workspace=frontend dev",
+    "build": "npm run --workspace=backend build",
+    "build:all": "npm run --workspace=backend build:tsc && npm run --workspace=frontend build",
+    "test": "npm run --workspace=backend test",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "lint": "npm run lint --workspaces",
+    "backend:dev": "npm run --workspace=backend dev",
+    "frontend:dev": "npm run --workspace=frontend dev",
+    "install:all": "npm install && npm install --workspace=backend && npm install --workspace=frontend"
+  },
+  "devDependencies": {
+    "@playwright/mcp": "^0.0.40",
+    "@playwright/test": "^1.56.1",
+    "playwright": "^1.56.1",
+    "typescript": "5.9.3"
+  },
+  "workspaces": [
+    "frontend",
+    "backend"
+  ]
+}

@@ -1,0 +1,143 @@
+upgrade_backend = { run = "pnpm update", dir = "backend", alias = "ubi" }
+[kill_zombie]
+run = "nu -c '^lsof -i :5100 | lines | last | split words | get 1 | ^kill $in'"
+alias = 'kz'
+[backend_dev]
+run = "sh -c 'watchexec -w src -o restart -d 3s pnpm tsx src/node.ts'"
+# run = "pnpm tsx src/node.ts"
+dir = "backend"
+# raw = true
+alias = "bed"
+description = "Start backend development server"
+env = { PORT = "5100", NODE_ENV='development' }
+
+[backend_dev_pglite]
+run = "pnpm tsx src/node.ts"
+dir = "backend"
+raw = true
+alias = "bedp"
+description = "Start backend development server with PGlite in-memory database (auto-migrated and seeded)"
+# wait_for = ["build_frontend"]  # Commented out to allow standalone running
+# Change to --inspect-brk to get it to stop FIRST thing
+env = { USE_PGLITE = "true", PORT = "5176", NODE_OPTIONS = "--inspect=9229", HOST = "localhost:5176", NODE_ENV = "development", TENANT_NAME="bedp", TRANSCRIPTION_SERVICE="elevenlabs" }
+# Note: ANTHROPIC_API_KEY and ELEVENLABS_API_KEY should be set in .env.local.yaml
+
+[backend_dev_postgres]
+run = "pnpm tsx src/node.ts"
+dir = "backend"
+raw = true
+alias = "bepg"
+description = "Start backend development server with Docker PostgreSQL database"
+# Change to --inspect-brk to get it to stop FIRST thing
+env = { DB_HOST = "localhost", DB_USER = "postgres", DB_PASSWORD = "coconuts", DB_DATABASE = "vantage", PORT = "5176", NODE_OPTIONS = "--inspect=9229", HOST = "localhost:5176", NODE_ENV = "development", TENANT_NAME="bedp", TRANSCRIPTION_SERVICE="elevenlabs" }
+# Note: ANTHROPIC_API_KEY and ELEVENLABS_API_KEY should be set in .env.local.yaml
+
+[truncate]
+run = "pnpm tsx utils/truncate.ts"
+dir = "backend"
+raw = true
+description = "Truncate all tables"
+
+["supabase:types"]
+dir = "backend"
+run = "pnpm supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > src/supabase.d.ts"
+description = "Generate TypeScript types from Supabase project"
+
+[honotypes]
+dir = "backend"
+run = ["pnpm tsc"]
+sources = ["backend/src/**/*"]
+outputs = ["backend/dist/src/**/*"]
+
+[whonotypes]
+dir = "backend"
+run = ["sh -c 'watchexec -w src -d 100ms pnpm tsc'"]
+
+[generate]
+dir = "backend"
+run = "pnpm drizzle-kit generate"
+alias = "gen"
+
+[migrate]
+dir = "backend"
+run = "pnpm drizzle-kit migrate"
+alias = "mg"
+
+[seed]
+dir = "backend"
+run = "pnpm tsx utils/seedDatabaseUrl.ts"
+
+[psql]
+run = "docker compose exec postgres psql -U postgres -d vantage"
+description = "Start a psql shell in the postgres container"
+alias = "db"
+raw = true
+
+[start_backend]
+run = "pnpm tsx src/node.ts"
+dir = "backend"
+wait_for = ["build_frontend"]
+description = "Start the backend server after frontend build"
+alias = "sb"
+
+[compose]
+run = "docker compose"
+
+[compose-deploy]
+run = "docker compose -f docker-compose.yaml -f docker-compose.deploy.yaml"
+alias = "dep"
+
+[test_backend]
+run = "pnpm test:run"
+dir = "backend"
+alias = "bt"
+description = "Run backend tests using Vitest"
+wait_for = ["honotypes"]
+env = { TENANT_NAME = "test" }
+
+[backend_format]
+run = "pnpm biome format --write"
+dir = "backend"
+
+[backend_lint]
+run = "pnpm biome lint --fix --unsafe --diagnostic-level=error"
+dir = "backend"
+alias = "bl"
+depends = ["backend_format"]
+
+[backend_format_check]
+run = "pnpm biome format"
+dir = "backend"
+description = "Check backend code formatting (CI mode - fails if formatting needed)"
+
+[backend_lint_check]
+run = "pnpm biome lint --diagnostic-level=error"
+dir = "backend"
+description = "Check backend code linting (CI mode - fails if issues found)"
+wait_for = ["backend_format_check"]
+
+[local_reset_db]
+description = "Reset the local Postgres database (drops and recreates the 'vantage' database, runs migrations, and seeds initial data)"
+run = [
+    "docker compose down",
+    "docker volume rm -f vantage_pgdata",
+    "docker compose up -d postgres",
+    "sleep 1",
+    "docker compose exec -T postgres psql -U postgres -c 'DROP DATABASE IF EXISTS vantage;'",
+    "docker compose exec -T postgres psql -U postgres -c 'CREATE DATABASE vantage;'",
+    "cd backend && pnpm drizzle-kit migrate",
+    "cd backend && pnpm tsx utils/seedDatabaseUrl.ts",
+]
+
+[docker_reset_db]
+description = "Reset the Postgres database in Docker (drops and recreates the 'vantage' database, runs migrations, and seeds initial data)"
+run = [
+    "docker compose down",
+    "docker volume rm -f vantage_pgdata",
+    "docker compose up -d postgres",
+    "sleep 1",
+    "docker compose exec -T postgres psql -U postgres -c 'DROP DATABASE IF EXISTS vantage;'",
+    "docker compose exec -T postgres psql -U postgres -c 'CREATE DATABASE vantage;'",
+    "docker compose -f docker-compose.yaml -f docker-compose.deploy.yaml run --rm app pnpm drizzle-kit migrate",
+    "docker compose -f docker-compose.yaml -f docker-compose.deploy.yaml run --rm app pnpm tsx utils/seedDatabaseUrl.ts",
+]

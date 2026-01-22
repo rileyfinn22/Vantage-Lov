@@ -1,0 +1,85 @@
+name: vantage-prod
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app
+    environment:
+      DB_HOST: postgres
+      DB_USER: postgres
+      DB_PASSWORD: ${DB_PASSWORD:-coconuts}
+      DB_DATABASE: vantage
+      HOST: ${DOMAIN:-localhost}
+      MISE_SOPS_AGE_KEY: ${MISE_SOPS_AGE_KEY:-}
+      TENANT_NAME: ${TENANT_NAME:-production}
+      NODE_ENV: production
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3030/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 40s
+
+  postgres:
+    image: postgres:17.6
+    networks:
+      - app
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-coconuts}
+      POSTGRES_DB: vantage
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 2s
+      retries: 3
+      start_period: 10s
+
+  nginx:
+    image: nginx:alpine
+    depends_on:
+      - app
+    networks:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d.template:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./nginx/start-nginx.sh:/start-nginx.sh:ro
+      - certbot-www:/var/www/certbot:ro
+      - certbot-conf:/etc/letsencrypt:ro
+    restart: unless-stopped
+    environment:
+      - DOMAIN=${DOMAIN:-localhost}
+    command: ["/bin/sh", "/start-nginx.sh"]
+
+  certbot:
+    image: certbot/certbot:latest
+    networks:
+      - app
+    volumes:
+      - certbot-www:/var/www/certbot
+      - certbot-conf:/etc/letsencrypt
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew --webroot --webroot-path=/var/www/certbot --quiet; sleep 12h & wait $${!}; done;'"
+    restart: unless-stopped
+
+networks:
+  app:
+    driver: bridge
+
+volumes:
+  pgdata:
+  certbot-www:
+  certbot-conf:

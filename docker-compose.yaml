@@ -1,0 +1,44 @@
+name: vantage
+services:
+  pgadmin:
+    profiles: ["pgadmin"]
+    image: dpage/pgadmin4:9
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@alexw.codes
+      PGADMIN_DEFAULT_PASSWORD: coconuts
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+  postgres:
+    image: postgres:17.6
+    networks:
+      - app
+      - teable
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: coconuts
+      POSTGRES_DB: vantage
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 1m
+      timeout: 2s
+      retries: 3
+      start_period: 8s
+      start_interval: 1s
+networks:
+  app:
+  teable:
+
+volumes:
+  pgadmin_data:
+  pgdata:

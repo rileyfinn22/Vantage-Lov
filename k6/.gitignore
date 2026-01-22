@@ -1,0 +1,18 @@
+# Environment files
+.env
+.env.local
+
+# k6 output files
+*.json
+*.csv
+*.html
+
+# Test results
+results/
+reports/
+
+# Logs
+*.log
+
+# Node modules (if using any npm packages)
+node_modules/

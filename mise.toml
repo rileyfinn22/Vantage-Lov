@@ -1,0 +1,150 @@
+[tools]
+sops = "3"
+age = "1"
+node = "24.9"
+"ubi:nushell/nushell" = { version = "0.106", exe = "nu" }
+"npm:@openai/codex" = "latest"
+# watchexec = "2"  # Disabled - not available for Windows ARM
+claude = "2"
+pnpm = "10.17"
+uv = "latest"
+python = "3"
+
+
+[env]
+# MISE_SOPS_AGE_KEY_FILE = "{{ config_root }}/age-key.txt"
+BROWSER = "none"
+# EDITOR = "code --wait"
+EDITOR = "micro"
+# SOPS_AGE_KEY_FILE = "{{ config_root}}/age-key.txt"
+
+# Setting MISE_ENV to prod will enable the production secrets
+_.file = ['.env.local.yaml']
+# DOCKER_HOST = "/Users/alex.herrmann/.colima/docker.sock"
+
+# OTEL_RESOURCE_ATTRIBUTES="service.name=vantage.monolith,service.version=0.0.1"
+### OPENTELEMETRY
+# OTEL_TRACES_EXPORTER="otlp"
+# OTEL_EXPORTER_OTLP_ENDPOINT="https://ingest.us.signoz.cloud:443"
+# OTEL_NODE_RESOURCE_DETECTORS="env,host,os"
+# OTEL_SERVICE_NAME="vantage-monolith"
+# OTEL_EXPORTER_OTLP_LOGS_ENDPOINT="https://ingest.us.signoz.cloud:443/v1/logs"
+# OTEL_EXPORTER_OTLP_HEADERS="signoz-ingestion-key={{get_env(name='SIGNOZ_KEY',default='')}}"
+# NODE_OPTIONS="--require @opentelemetry/auto-instrumentations-node/register"
+
+[task_config]
+includes = [
+    "mise-tasks/backend.toml",
+    "mise-tasks/frontend.toml",
+    'mise-tasks/',
+]
+
+## Run any task with `mise r <task_name>`
+[tasks]
+install = { run = "pnpm install", alias = "i" }
+lint = { run = [{task = "backend_lint"}, {task = "frontend_lint"}], alias = "l" }
+build = { depends = ["honotypes", "build_frontend"], alias = "b" }
+upgrade = { depends = ["upgrade_frontend", "upgrade_backend"], alias = "u" }
+clean = [
+    "cd frontend && rm -rf node_modules",
+    "cd backend && rm -rf node_modules",
+]
+
+[tasks.d_build]
+
+description = "Docker build for gcloud sandbox environment"
+run = "docker build -t us-west1-docker.pkg.dev/vantage-471500/vantage-app-sandbox ."
+
+[tasks.d_push]
+description = "Push Docker image to sandbox repository"
+run = "docker push us-west1-docker.pkg.dev/vantage-471500/vantage-app-sandbox"
+
+[tasks.cors_upload]
+description = "Upload CORS configuration to GCS bucket"
+run = "gcloud storage buckets update gs://${GCS_BUCKET} --cors-file=cors.json"
+alias = "cu"
+
+[tasks.checkit]
+shell = "node -e"
+run = "console.log(process.env.MISE_SOPS_AGE_KEY)"
+env = { MISE_SOPS_AGE_KEY = "{{ read_file(path='age-key.txt') | split(pat='\n') | nth(n=2) | trim }}" }
+
+[tasks.d_prod]
+description = "Docker compose prod env"
+run = "docker compose -f docker-compose.yaml -f docker-compose.deploy.yaml"
+alias = ["dp"]
+env = { MISE_SOPS_AGE_KEY = "{{ read_file(path='age-key.txt') | split(pat='\n') | nth(n=2) | trim }}" }
+
+[tasks.build_and_serve]
+depends = ["honotypes", "build_frontend"]
+run = "mise r start_backend"
+alias = ["serve", "s"]
+description = "Build frontend and start backend server (full stack serve)"
+env = { PORT = "5025", NODE_OPTIONS = "--inspect=9229", HOST = "localhost:5025", NODE_ENV = "development" }
+
+
+[settings.sops]
+age_key_file = "{{ config_root }}/age-key.txt"
+strict = false
+
+
+[tasks."check:ci:lint"]
+description = "Run lint and format checks for CI (fails if issues found)"
+run = [
+    { task = "backend_lint_check" },
+    { task = "frontend_lint_check" },
+    { task = "backend_format_check" },
+    { task = "frontend_format_check" },
+]
+
+
+[tasks."check:ci:build"]
+description = "Run build and typecheck steps for CI"
+run = [
+    { task = "honotypes" },
+    { task = "frontend_typecheck" },
+    { task = "build_frontend" },
+]
+
+[tasks."check:ci:test:unit"]
+description = "Run fast unit and integration tests for CI (vitest only)"
+run = [
+    { tasks = ["frontend_vitest", "test_backend"] },
+]
+env = { TENANT_NAME = "test" }
+
+[tasks."check:local:test:browser"]
+description = "Run browser tests locally (Playwright)"
+run = [
+    { task = "frontend_playwright" },
+]
+
+[tasks."check:ci:test"]
+description = "Run all tests for CI"
+run = [
+    {task = "check:ci:test:unit" },
+]
+
+[tasks."check:ci"]
+description = "Run all CI checks (lint, build, test)"
+run = [
+    {task = "check:ci:lint" },
+    {task = "check:ci:build" },
+    {task = "check:ci:test" },
+]
+
+[tasks.overmind]
+run = "overmind start"
+description = "Start all processes with overmind"
+alias = "om"
+env = { VITE_API_URL = "https://localhost:5100" }
+raw = true
+
+[tasks.overmind_attach]
+run = "overmind c"
+
+[tasks."mcp:serena"]
+run = "uvx --from git+https://github.com/oraios/serena serena start-mcp-server --enable-web-dashboard False --context ide-assistant --project $(pwd)"
+
+[tasks."mcp:playwright"]
+run = "pnpm dlx @playwright/mcp"

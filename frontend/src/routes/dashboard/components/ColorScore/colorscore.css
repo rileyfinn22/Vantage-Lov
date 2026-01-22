@@ -1,0 +1,16 @@
+.x-calced-background {
+    background-color: color-mix(in srgb, color-mix(in srgb,
+                red calc(100% - var(--points)),
+                green var(--points)),
+            white 50%);
+    /* [data-theme="dark"] & { */
+    /* background-color: color-mix(in srgb, red var(--points), green calc(100% - var(--points))); */
+    /* background-color: hsl(calc(var(--points) / 100 * 360), 100%, 50%); */
+    /* background-color: color-mix(in srgb, red 50%, green); */
+    /* } */
+
+    /* [data-theme="light"] & { */
+    /* background-color: hsl(calc(var(--points) / 100 * 360), 70%, 70%); */
+    /* background-color: color-mix(in srgb, red 50%, transparent); */
+    /* } */
+}

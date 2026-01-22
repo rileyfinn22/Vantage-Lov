@@ -1,0 +1,25 @@
+transcript = """
+Salesperson: Hi, thanks for taking my call today. I'm calling from TechWidgets Inc.
+
+Prospect: Sure, what's this about?
+
+Salesperson: We have an amazing new widget system that can revolutionize your operations! It has automated workflows, real-time analytics, and seamless integrations. Most companies see a 40% productivity boost in the first quarter.
+
+Prospect: Okay... but I'm not sure what problem this solves for us.
+
+Salesperson: It solves all your productivity problems! The system has five different modules that work together. Let me walk you through each feature...
+
+Prospect: I really don't have time for a full demo right now.
+
+Salesperson: It'll only take 15 minutes! This is really valuable information.
+
+Prospect: I need to go. Maybe send me an email?
+
+Salesperson: Sure, I'll send you our brochure. Can we schedule a follow-up call for next week?
+
+Prospect: I'll reach out if I'm interested. Thanks.
+"""
+
+salesperson_context = "Inside Sales Rep, 6 months experience, selling B2B SaaS"
+
+expected_flag_title = "Skipped Discovery - Jumped to Pitch Without Understanding Needs"

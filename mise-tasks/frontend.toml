@@ -1,0 +1,64 @@
+
+upgrade_frontend = { run = "npm update", dir = "frontend", alias = "ufi" }
+
+[build_frontend]
+wait_for = ["honotypes"]
+run = "pnpm run build"
+dir = "frontend"
+description = "Build the frontend for production"
+alias = ["bf", "build_front"]
+
+[frontend_vitest]
+run = "pnpm vitest run"
+dir = "frontend"
+alias = ["fvt",]
+
+[frontend_playwright]
+run = "pnpm playwright test"
+dir = "frontend"
+
+[frontend_test]
+depends = ["frontend_vitest", "frontend_playwright"]
+alias = ["ft", "test_frontend"]
+
+[frontend_storybook]
+run = "pnpm run storybook"
+dir = "frontend"
+alias = ["storybook", 'sb']
+description = "Start Storybook for frontend component development and testing"
+
+[frontend_dev]
+run = "pnpm vite dev"
+dir = "frontend"
+raw = true
+alias = "fed"
+description = "Start frontend development server using Vite"
+env = { VITE_API_URL = "http://localhost:5176", PORT = "5000" }
+
+[frontend_format]
+run = "pnpm biome format --write"
+dir = "frontend"
+
+[frontend_lint]
+description = "Lint frontend code with Biome, auto-fix issues"
+run = "pnpm biome lint --fix --unsafe --diagnostic-level=error"
+dir = "frontend"
+alias = "fl"
+depends = ["frontend_format"]
+
+[frontend_format_check]
+run = "pnpm biome format"
+dir = "frontend"
+description = "Check frontend code formatting (CI mode - fails if formatting needed)"
+
+[frontend_lint_check]
+run = "pnpm biome lint --diagnostic-level=error"
+dir = "frontend"
+description = "Check frontend code linting (CI mode - fails if issues found)"
+wait_for = ["frontend_format_check"]
+
+[frontend_typecheck]
+description = "Run tsc in the frontend"
+run = "pnpm exec tsc -b --noEmit"
+dir = "frontend"
+alias = "ftsc"

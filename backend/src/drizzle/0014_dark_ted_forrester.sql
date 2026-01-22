@@ -1,0 +1,1 @@
+ALTER TABLE "interactions" DROP COLUMN "raw_interaction_text";

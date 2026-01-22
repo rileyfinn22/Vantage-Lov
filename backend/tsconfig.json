@@ -1,0 +1,22 @@
+{
+	"compilerOptions": {
+		"declaration": true,
+		"emitDeclarationOnly": true,
+		"target": "esnext",
+		"module": "esnext",
+		"moduleResolution": "bundler",
+		"strict": true,
+		"skipLibCheck": true,
+		"lib": ["ES5", "ESNext", "DOM"],
+		"types": ["node"],
+		"jsx": "react-jsx",
+		"jsxImportSource": "hono/jsx",
+		"baseUrl": ".",
+		"paths": {
+			"#/*": ["./src/*"]
+		},
+		"outDir": "./dist",
+		"forceConsistentCasingInFileNames": true
+	},
+	"include": ["src/**/*", "utils/**/*.ts"]
+}

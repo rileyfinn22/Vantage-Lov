@@ -1,0 +1,114 @@
+@import 'tailwindcss';
+@plugin "@tailwindcss/typography";
+
+@plugin 'daisyui' {
+    themes: vantage-dark --default, vantage;
+}
+
+@plugin "daisyui/theme" {
+    name: "vantage";
+    default: true;
+    color-scheme: light;
+
+    /* Brand colors from lovable design */
+    --color-primary: hsl(20 60% 50%);
+    --color-primary-content: hsl(0 0% 100%);
+    --color-secondary: hsl(180 2% 95%);
+    --color-secondary-content: hsl(0 0% 11%);
+    --color-accent: hsl(220 70% 50%);
+    --color-accent-content: hsl(0 0% 100%);
+    --color-neutral: hsl(0 0% 11%);
+    --color-neutral-content: hsl(0 0% 100%);
+    --color-base-100: hsl(0 0% 100%);
+    --color-base-200: hsl(180 2% 95%);
+    --color-base-300: hsl(180 2% 90%);
+    --color-base-content: hsl(0 0% 11%);
+    --color-info: hsl(199 89% 48%);
+    --color-info-content: hsl(0 0% 100%);
+    --color-success: hsl(142 71% 45%);
+    --color-success-content: hsl(0 0% 100%);
+    --color-warning: hsl(38 92% 50%);
+    --color-warning-content: hsl(0 0% 0%);
+    --color-error: hsl(0 72% 51%);
+    --color-error-content: hsl(0 0% 100%);
+
+    /* Border radius */
+    --radius-selector: 1rem;
+    --radius-field: 0.5rem;
+    --radius-box: 1rem;
+
+    /* Size */
+    --size-selector: 0.25rem;
+    --size-field: 0.25rem;
+
+    /* Border */
+    --border: 1px;
+
+    /* Effects */
+    --depth: 0;
+    --noise: 0;
+}
+
+@plugin "daisyui/theme" {
+    name: "vantage-dark";
+    color-scheme: dark;
+
+    /* Dark theme colors - darker background */
+    --color-primary: hsl(20 60% 50%);
+    --color-primary-content: hsl(0 0% 100%);
+    --color-secondary: hsl(0 0% 15%);
+    --color-secondary-content: hsl(0 0% 100%);
+    --color-accent: hsl(20 60% 50%);
+    --color-accent-content: hsl(0 0% 100%);
+    --color-neutral: hsl(0 0% 5%);
+    --color-neutral-content: hsl(0 0% 65%);
+    --color-base-100: hsl(0 0% 5%);
+    --color-base-200: hsl(0 0% 12%);
+    --color-base-300: hsl(0 0% 18%);
+    --color-base-content: hsl(0 0% 100%);
+    --color-info: hsl(199 89% 48%);
+    --color-info-content: hsl(0 0% 100%);
+    --color-success: hsl(158 84% 39%);
+    --color-success-content: hsl(0 0% 100%);
+    --color-warning: hsl(38 91% 50%);
+    --color-warning-content: hsl(0 0% 0%);
+    --color-error: hsl(0 84% 60%);
+    --color-error-content: hsl(0 0% 100%);
+
+    /* Border radius */
+    --radius-selector: 1rem;
+    --radius-field: 0.5rem;
+    --radius-box: 1rem;
+
+    /* Size */
+    --size-selector: 0.25rem;
+    --size-field: 0.25rem;
+
+    /* Border */
+    --border: 1px;
+
+    /* Effects */
+    --depth: 0;
+    --noise: 0;
+}
+
+body {
+    @apply min-h-screen;
+}
+
+/* Custom animations for training UI */
+@keyframes fade-in-up {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade-in-up {
+    animation: fade-in-up 0.3s ease-out forwards;
+    opacity: 0;
+}

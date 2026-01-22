@@ -1,0 +1,21 @@
+transcript = """
+Salesperson: Hi, this is Mike from CloudSync Solutions. Do you have a minute?
+
+Prospect: Sure, I guess. What's this about?
+
+Salesperson: Great! So we offer a revolutionary cloud synchronization platform that integrates with over 50 different systems. We have features like real-time data sync, automated backups, conflict resolution, version control, and enterprise-grade security. Our clients include Fortune 500 companies and we've processed over 10 billion transactions. The platform supports AWS, Azure, GCP, and private clouds. We also have a mobile app, API access, webhooks, and custom integration options. The analytics dashboard provides insights into sync patterns, error rates, and performance metrics.
+
+Prospect: Okay... that's a lot. I'm actually-
+
+Salesperson: And the best part is we're running a special promotion this month! If you sign up now, you get 30% off your first year plus free implementation. That's a $15,000 value. We also throw in training for your team and dedicated support. This deal expires on Friday though, so you'd want to move quickly.
+
+Prospect: I appreciate the call, but we're not really looking for anything right now.
+
+Salesperson: Are you sure? This is really an amazing deal. Let me send you our pricing sheet at least?
+
+Prospect: I don't think that's necessary. Thanks anyway.
+"""
+
+salesperson_context = "Enterprise Sales Rep, 2 years experience, B2B SaaS"
+
+expected_flag_title = "Feature Dumping Without Discovery - Overwhelming Prospect"

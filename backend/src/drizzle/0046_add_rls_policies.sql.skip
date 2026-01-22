@@ -1,0 +1,94 @@
+-- Row Level Security (RLS) Policies for Company Data Isolation
+-- This provides database-level protection in addition to application-level checks
+
+-- Enable RLS on company-scoped tables
+ALTER TABLE company_ai_context ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+ALTER TABLE feedback_events ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+ALTER TABLE company_training_data ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+ALTER TABLE salespeople ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+ALTER TABLE battle_cards ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+ALTER TABLE training_examples ENABLE ROW LEVEL SECURITY;
+
+--> statement-breakpoint
+
+-- Create a function to get the current company_id from session
+-- This should be set by the application before each request
+CREATE OR REPLACE FUNCTION current_company_id() RETURNS INTEGER AS $$
+BEGIN
+  RETURN NULLIF(current_setting('app.company_id', true), '')::INTEGER;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+--> statement-breakpoint
+
+-- Create a function to check if current user is a site admin (bypasses RLS)
+CREATE OR REPLACE FUNCTION is_site_admin() RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN COALESCE(current_setting('app.is_site_admin', true)::BOOLEAN, false);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+--> statement-breakpoint
+
+-- Policy for company_ai_context: users can only see their company's context
+CREATE POLICY company_ai_context_isolation ON company_ai_context
+  USING (
+    is_site_admin() OR
+    company_id = current_company_id()
+  );
+
+--> statement-breakpoint
+
+-- Policy for feedback_events: users can only see their company's feedback
+CREATE POLICY feedback_events_isolation ON feedback_events
+  USING (
+    is_site_admin() OR
+    company_id = current_company_id()
+  );
+
+--> statement-breakpoint
+
+-- Policy for company_training_data: users can only see their company's training data
+CREATE POLICY company_training_data_isolation ON company_training_data
+  USING (
+    is_site_admin() OR
+    company_id = current_company_id()
+  );
+
+--> statement-breakpoint
+
+-- Policy for salespeople: users can only see salespeople in their company
+CREATE POLICY salespeople_isolation ON salespeople
+  USING (
+    is_site_admin() OR
+    company_id = current_company_id()
+  );
+
+--> statement-breakpoint
+
+-- Policy for battle_cards: users can only see their company's battle cards
+CREATE POLICY battle_cards_isolation ON battle_cards
+  USING (
+    is_site_admin() OR
+    company_id = current_company_id()
+  );
+
+--> statement-breakpoint
+
+-- Policy for training_examples: users can only see their company's examples
+CREATE POLICY training_examples_isolation ON training_examples
+  USING (
+    is_site_admin() OR
+    company_id = current_company_id()
+  );
+
+-- Note: interactions, flags, skills_assessments are protected through salespeople
+-- (they reference salesperson_id, which is already company-scoped)
+
+-- Grant usage to the application role (adjust role name as needed)
+-- GRANT ALL ON ALL TABLES IN SCHEMA public TO app_user;

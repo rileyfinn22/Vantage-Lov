@@ -1,0 +1,12 @@
+# k6 Load Testing Tasks
+# Run load tests against the backend
+
+[tools]
+"k6" = "1"
+
+[env]
+# Default test configuration
+BASE_URL = "https://localhost:5025"
+# Tests use seeded users by default (no need to set credentials)
+# Seeded users: alex@, bob@, robert@, lee@, angela@, admin@ @v.alexw.codes
+# All with password: brazil-tree-fire

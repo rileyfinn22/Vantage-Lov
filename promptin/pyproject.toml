@@ -1,0 +1,14 @@
+[project]
+name = "promptin"
+version = "0.1.0"
+description = "DSPy-based prompt optimization for flag extraction from sales calls"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "dspy>=3.0.3",
+    "pip>=25.2",
+    "pydantic>=2.0.0",
+]
+
+[project.scripts]
+train = "train:main"

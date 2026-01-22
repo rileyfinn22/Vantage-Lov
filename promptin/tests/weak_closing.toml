@@ -1,0 +1,25 @@
+transcript = """
+Salesperson: So that's our product overview. We've covered the main features, pricing tiers, and implementation timeline.
+
+Prospect: This looks really interesting. I can see how it would help with our workflow issues.
+
+Salesperson: Great! I'm glad it resonates with you. Do you have any other questions?
+
+Prospect: Not right now, I think you've covered everything pretty well.
+
+Salesperson: Awesome. Well, feel free to reach out if anything comes up.
+
+Prospect: Will do. Thanks for your time.
+
+Salesperson: No problem! Have a great day.
+
+Prospect: You too.
+
+Salesperson: Oh, and I'll send you a follow-up email with the materials we discussed.
+
+Prospect: Perfect, thanks!
+"""
+
+salesperson_context = "Sales Development Rep, 1 year experience, B2B software"
+
+expected_flag_title = "Weak Closing - Failed to Establish Next Steps or Ask for Commitment"

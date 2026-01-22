@@ -1,0 +1,320 @@
+import type { AuthVariable } from "#/lib/types";
+import { Hono } from "hono";
+import * as schema from "#/data/schema";
+import { db } from "#/data";
+import { eq, ne, gte, lte, like, and, count, type SQL } from "drizzle-orm";
+import { Table, is } from "drizzle-orm";
+import { getTableConfig } from "drizzle-orm/pg-core";
+import { memoize } from "es-toolkit";
+import { zValidator } from "@hono/zod-validator";
+import z from "zod";
+import type { ZodObject, ZodRawShape } from "zod";
+import { logger } from "#/lib/logger";
+
+/**
+ * Creates a parameter validator with consistent error handling
+ * @param schema - Zod object schema for parameter validation
+ * @param errorMessage - Custom error message (optional)
+ * @returns zValidator middleware for parameter validation
+ */
+const createParamValidator = <T extends ZodRawShape>(schema: ZodObject<T>, errorMessage: string = "Invalid parameters") => {
+	return zValidator("param", schema, (result, c) => {
+		if (!result.success) {
+			// const { message } = result.error;
+			logger.warn({ issues: result.error.issues }, "Parameter validation failed");
+			return c.json({ error: errorMessage }, 400);
+		}
+	});
+};
+
+// Reusable validation schemas
+const resourceSchema = z.object({
+	resource: z
+		.string()
+		.min(1)
+		.max(60)
+		.regex(/^[a-zA-Z0-9-_]+$/, "Resource name must contain only alphanumeric characters and dashes"),
+});
+
+const resourceWithIdSchema = z.object({
+	resource: z
+		.string()
+		.min(1)
+		.max(60)
+		.regex(/^[a-zA-Z0-9-_]+$/, "Resource name must contain only alphanumeric characters and dashes"),
+	// id: z.string().regex(/^(\d{1,6})|([a-zA-Z0-9]{32})$/, "ID must be a positive integer"),
+	id: z.union([
+		z.coerce.number().int().min(1).max(999999),
+		z.string().regex(/^[a-zA-Z0-9]{32}$/, "ID must be a 32-character alphanumeric string"),
+	]),
+});
+
+const getAvailableTables = memoize(() => {
+	const tables: Record<string, any> = {};
+	for (const [, table] of Object.entries(schema)) {
+		if (is(table, Table)) {
+			const { name: tableName } = getTableConfig(table);
+			tables[tableName] = table;
+		}
+	}
+	return tables;
+});
+
+/**
+ * Parses simple-rest style query parameters into Drizzle WHERE conditions
+ * Supports operators: eq (default), ne, gte, lte, like (contains)
+ * @param queryParams - URL query parameters
+ * @param table - Drizzle table reference
+ * @returns Array of SQL conditions to be combined with AND
+ */
+const parseFiltersFromQuery = (queryParams: Record<string, string>, table: any): SQL[] => {
+	const conditions: SQL[] = [];
+
+	for (const [key, value] of Object.entries(queryParams)) {
+		// Skip pagination and sorting parameters
+		if (["_start", "_end", "_limit", "_page", "_sort", "_order"].includes(key)) {
+			continue;
+		}
+
+		// Handle special search parameter
+		if (key === "q") {
+			// For general search, we'd need to implement full-text search
+			// Skip for now as it requires table-specific logic
+			continue;
+		}
+
+		// Parse operator from parameter name
+		let field = key;
+		let operator = "eq"; // default operator
+
+		if (key.endsWith("_ne")) {
+			field = key.slice(0, -3);
+			operator = "ne";
+		} else if (key.endsWith("_gte")) {
+			field = key.slice(0, -4);
+			operator = "gte";
+		} else if (key.endsWith("_lte")) {
+			field = key.slice(0, -4);
+			operator = "lte";
+		} else if (key.endsWith("_like")) {
+			field = key.slice(0, -5);
+			operator = "like";
+		}
+
+		// Check if field exists in table
+		if (!(field in table)) {
+			logger.warn({ field }, "Field not found in table, skipping filter");
+			continue;
+		}
+
+		// Create appropriate condition based on operator
+		try {
+			const column = table[field];
+			let parsedValue: any = value;
+
+			// Try to parse numeric values
+			if (!Number.isNaN(Number(value)) && value !== "") {
+				parsedValue = Number(value);
+			}
+
+			switch (operator) {
+				case "eq":
+					conditions.push(eq(column, parsedValue));
+					break;
+				case "ne":
+					conditions.push(ne(column, parsedValue));
+					break;
+				case "gte":
+					conditions.push(gte(column, parsedValue));
+					break;
+				case "lte":
+					conditions.push(lte(column, parsedValue));
+					break;
+				case "like":
+					conditions.push(like(column, `%${value}%`));
+					break;
+			}
+		} catch (error) {
+			logger.warn({ field, error }, "Failed to create filter condition");
+		}
+	}
+
+	return conditions;
+};
+
+const app = new Hono<AuthVariable<false>>()
+	.get("/tables", async (c) => {
+		const tables = getAvailableTables();
+		return c.json({ tables: Object.keys(tables) });
+	})
+	.get("/:resource", createParamValidator(resourceSchema, "Invalid resource parameter"), async (c) => {
+		const resource = c.req.valid("param").resource;
+		const tables = getAvailableTables();
+		const table = tables[resource];
+
+		if (!table) {
+			return c.json({ error: "Resource not found" }, 404);
+		}
+
+		// Parse query parameters for filters
+		const queryParams = c.req.queries();
+		const flatParams: Record<string, string> = {};
+
+		// Flatten query parameters (Hono returns arrays)
+		for (const [key, values] of Object.entries(queryParams)) {
+			if (values && values.length > 0) {
+				flatParams[key] = values[0];
+			}
+		}
+
+		// Parse filters from query parameters
+		const filterConditions = parseFiltersFromQuery(flatParams, table);
+
+		// Parse pagination parameters
+		let limit: number | undefined;
+		let offset: number | undefined;
+
+		// Support both simple-rest pagination formats
+		if (flatParams._start && flatParams._end) {
+			// Format: ?_start=0&_end=10
+			const start = parseInt(flatParams._start, 10);
+			const end = parseInt(flatParams._end, 10);
+			if (!Number.isNaN(start) && !Number.isNaN(end) && start >= 0 && end > start) {
+				offset = start;
+				limit = end - start;
+			}
+		} else if (flatParams._page && flatParams._limit) {
+			// Format: ?_page=1&_limit=10
+			const page = parseInt(flatParams._page, 10);
+			const pageLimit = parseInt(flatParams._limit, 10);
+			if (!Number.isNaN(page) && !Number.isNaN(pageLimit) && page >= 1 && pageLimit > 0) {
+				offset = (page - 1) * pageLimit;
+				limit = pageLimit;
+			}
+		}
+
+		// Get total count (with filters applied)
+		const countQuery =
+			filterConditions.length > 0
+				? db
+						.select({ count: count() })
+						.from(table)
+						.where(and(...filterConditions))
+				: db.select({ count: count() }).from(table);
+
+		const [{ count: totalCount }] = await countQuery;
+
+		// Build paginated query with optional WHERE clause and pagination
+		let query: any;
+		if (filterConditions.length > 0) {
+			query = db
+				.select()
+				.from(table)
+				.where(and(...filterConditions));
+			if (limit !== undefined && offset !== undefined) {
+				query = query.limit(limit).offset(offset);
+			}
+		} else {
+			query = db.select().from(table);
+			if (limit !== undefined && offset !== undefined) {
+				query = query.limit(limit).offset(offset);
+			}
+		}
+
+		const results = await query;
+
+		// Return results array with X-Total-Count header for Refine simple-rest
+		c.header("X-Total-Count", totalCount.toString());
+		return c.json(results);
+	})
+	.get("/:resource/:id", createParamValidator(resourceWithIdSchema, "Invalid resource or ID parameter"), async (c) => {
+		const { resource, id } = c.req.valid("param");
+		const tables = getAvailableTables();
+		const table = tables[resource];
+
+		if (!table) {
+			return c.json({ error: "Resource not found" }, 404);
+		}
+
+		const result = await db.select().from(table).where(eq(table.id, id)).limit(1);
+
+		if (result.length === 0) {
+			return c.json({ error: "Record not found" }, 404);
+		}
+
+		return c.json(result[0]);
+	})
+	.post("/:resource", createParamValidator(resourceSchema, "Invalid resource parameter"), async (c) => {
+		const { resource } = c.req.valid("param");
+		const tables = getAvailableTables();
+		const table = tables[resource];
+
+		if (!table) {
+			return c.json({ error: "Resource not found" }, 404);
+		}
+
+		try {
+			const body = await c.req.json();
+			const result = (await db.insert(table).values(body).returning()) as any[];
+			return c.json(result[0], 201);
+		} catch (error) {
+			if (error instanceof SyntaxError) {
+				return c.json({ error: "Invalid JSON" }, 400);
+			}
+			logger.error({ error }, "Insert error");
+			return c.json({ error: "Failed to create record" }, 400);
+		}
+	})
+	.patch("/:resource/:id", createParamValidator(resourceWithIdSchema, "Invalid resource or ID parameter"), async (c) => {
+		const { resource, id } = c.req.valid("param");
+		const tables = getAvailableTables();
+		const table = tables[resource];
+
+		if (!table) {
+			return c.json({ error: "Resource not found" }, 404);
+		}
+
+		try {
+			const body = await c.req.json();
+			logger.debug(
+				{
+					body,
+				},
+				`updating entry ${id} in ${resource}`,
+			);
+			const result = await db.update(table).set(body).where(eq(table.id, id)).returning();
+
+			if (result.length === 0) {
+				return c.json({ error: "Record not found" }, 404);
+			}
+
+			return c.json(result[0]);
+		} catch (error) {
+			logger.error({ error }, "Update error");
+			return c.json({ error: "Failed to update record" }, 400);
+		}
+	})
+	.delete("/:resource/:id", createParamValidator(resourceWithIdSchema, "Invalid resource or ID parameter"), async (c) => {
+		const { resource, id } = c.req.valid("param");
+		const tables = getAvailableTables();
+		const table = tables[resource];
+
+		if (!table) {
+			return c.json({ error: "Resource not found" }, 404);
+		}
+
+		try {
+			const result = (await db.delete(table).where(eq(table.id, id)).returning()) as any[];
+
+			if (result.length === 0) {
+				return c.json({ error: "Record not found" }, 404);
+			}
+
+			return c.json({ success: true });
+		} catch (error) {
+			logger.error({ error }, "Delete error");
+			return c.json({ error: "Failed to delete record" }, 400);
+		}
+	});
+
+export default app;
