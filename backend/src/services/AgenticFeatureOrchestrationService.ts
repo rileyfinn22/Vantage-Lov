@@ -28,14 +28,20 @@ function getToolsForFeature(feature: AgenticFeatureKey): ToolRegistry {
 	}
 }
 
-function getSystemPrompt(feature: AgenticFeatureKey): string {
-	return [
-		"You are an agentic workflow orchestrator.",
-		"You MUST use tools to perform actions; do not hallucinate data.",
-		"Keep iterations low and prefer direct tool calls.",
-		"Return final output as strict JSON wrapped in <final_json> tags.",
-		`Feature: ${feature}`,
-	].join("\n");
+function getFeaturePromptKey(feature: AgenticFeatureKey): string {
+	switch (feature) {
+		case "battle_cards_weekly_generate":
+			return "FEATURE_BATTLE_CARDS_WEEKLY";
+		case "battle_card_generate_from_objection":
+		case "battle_card_generate_from_pain_point":
+			return "FEATURE_BATTLE_CARD_GENERATE";
+		case "calibration_run":
+			return "FEATURE_COMPANY_CALIBRATE";
+		default: {
+			const _exhaustive: never = feature;
+			return _exhaustive;
+		}
+	}
 }
 
 function getUserPrompt(feature: AgenticFeatureKey, input: Record<string, unknown>): string {
@@ -69,14 +75,15 @@ export class AgenticFeatureOrchestrationService {
 			},
 		};
 
-		const system = getSystemPrompt(feature);
+		const featureKey = getFeaturePromptKey(feature);
 		const userPrompt = getUserPrompt(feature, input);
 
 		const { output, trace } = await SupervisorAgentRunner.run({
 			config,
 			toolRegistry,
 			ctx,
-			system,
+			featureKey,
+			system: "",
 			userPrompt,
 		});
 

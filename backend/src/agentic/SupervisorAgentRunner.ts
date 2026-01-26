@@ -1,10 +1,10 @@
+import * as fs from "node:fs";
+import * as path from "node:path";
 import { getAnthropicClient } from "#/lib/anthropic";
 import { logger } from "#/lib/logger";
 import type { ToolContext, AgenticRunConfig, AgenticTraceEvent, JsonValue } from "./types";
 import { ToolRegistry } from "./ToolRegistry";
 import { AgentRunner } from "./AgentRunner";
-
-const RUBRIC = "Advanced Sales Assessment System (Rubric for evaluation-style outputs):\n- Evaluate across five integrated dimensions: Behavioral Linguistics; Emotional Intelligence & Psychological Dynamics; Sales Methodology Mastery; Tactical Execution & Technique; Outcome Predictability & Deal Analysis.\n- For each dimension: provide score + strengths + gaps; include evidence (specific quotes or moments) for claims; avoid generic feedback.\n- Produce structured, machine-parseable JSON with sub-scores and a concise executive summary when assessments are requested.";
 
 function isoNow(): string {
 	return new Date().toISOString();
@@ -25,40 +25,161 @@ function extractBetween(text: string, startTag: string, endTag: string): string 
 	return text.slice(start + startTag.length, end).trim();
 }
 
+let SUPER_PROMPT_CACHE: string | null = null;
+function getSupervisorSuperPrompt(): string {
+	if (SUPER_PROMPT_CACHE) return SUPER_PROMPT_CACHE;
+
+	// Resolve at runtime so this works in ts-node and compiled JS.
+	// __dirname points to backend/src/agentic in TS runtime; in dist it will be dist/agentic.
+	const candidatePaths = [
+		path.join(__dirname, "prompts", "SUPERVISOR_SUPERPROMPT.md"),
+		path.join(process.cwd(), "backend", "src", "agentic", "prompts", "SUPERVISOR_SUPERPROMPT.md"),
+	];
+
+	for (const p of candidatePaths) {
+		try {
+			if (fs.existsSync(p)) {
+				SUPER_PROMPT_CACHE = fs.readFileSync(p, "utf8");
+				return SUPER_PROMPT_CACHE;
+			}
+		} catch {
+			// ignore and keep searching
+		}
+	}
+
+	// Safe fallback to avoid hard failure if file missing in some environments.
+	SUPER_PROMPT_CACHE =
+		"Supervisor Agent: coordinate planner/executor/verifier sub-agents; enforce allowlisted tools; output JSON; no hallucinations.";
+	return SUPER_PROMPT_CACHE;
+}
+
+
+
+let FEATURE_PROMPT_CACHE: Record<string, string> = {};
+function getFeaturePrompt(featureKey?: string): string {
+	if (!featureKey) return "";
+	if (FEATURE_PROMPT_CACHE[featureKey]) return FEATURE_PROMPT_CACHE[featureKey];
+
+	// Feature prompt files live under prompts/features.
+	const fname = featureKey.endsWith(".md") ? featureKey : `${featureKey}.md`;
+	const candidatePaths = [
+		path.join(__dirname, "prompts", "features", fname),
+		path.join(process.cwd(), "backend", "src", "agentic", "prompts", "features", fname),
+	];
+
+	for (const p of candidatePaths) {
+		try {
+			if (fs.existsSync(p)) {
+				FEATURE_PROMPT_CACHE[featureKey] = fs.readFileSync(p, "utf8");
+				return FEATURE_PROMPT_CACHE[featureKey];
+			}
+		} catch {
+			// ignore and keep searching
+		}
+	}
+
+	// Safe fallback if missing: keep empty so the super prompt still works.
+	FEATURE_PROMPT_CACHE[featureKey] = "";
+	return "";
+}
+type RunParamsLegacy = {
+	config: AgenticRunConfig;
+	toolRegistry: ToolRegistry;
+	ctx: ToolContext;
+	systemBase: string;
+	goal: string;
+	outputShapeHint: string;
+	assessmentRubricEnabled?: boolean;
+};
+
+type RunParamsNew = {
+	config: AgenticRunConfig;
+	toolRegistry: ToolRegistry;
+	ctx: ToolContext;
+	/** Plain-English feature instructions (optional). */
+	system?: string;
+	/** Optional feature prompt key (loads prompts/features/<key>.md). */
+	featureKey?: string;
+	/** The user/system goal for this run. */
+	userPrompt: string;
+	/** Optional hint for the final JSON shape. */
+	outputShapeHint?: string;
+	assessmentRubricEnabled?: boolean;
+};
+
+type RunParams = RunParamsLegacy | RunParamsNew;
+
+function normalizeParams(params: RunParams): {
+	config: AgenticRunConfig;
+	toolRegistry: ToolRegistry;
+	ctx: ToolContext;
+	featureSystem: string;
+	featureKey?: string;
+	goal: string;
+	outputShapeHint: string;
+	assessmentRubricEnabled: boolean;
+} {
+	const assessmentRubricEnabled = (params as any).assessmentRubricEnabled ?? true;
+
+	// Legacy callers
+	if ((params as any).systemBase && (params as any).goal) {
+		return {
+			config: (params as any).config,
+			toolRegistry: (params as any).toolRegistry,
+			ctx: (params as any).ctx,
+			featureSystem: (params as any).systemBase,
+			goal: (params as any).goal,
+			outputShapeHint: (params as any).outputShapeHint ?? "Return JSON output.",
+			assessmentRubricEnabled,
+		};
+	}
+
+	// New callers
+	return {
+		config: (params as any).config,
+		toolRegistry: (params as any).toolRegistry,
+		ctx: (params as any).ctx,
+		featureSystem: (params as any).system ?? "",
+		featureKey: (params as any).featureKey,
+		goal: (params as any).userPrompt,
+		outputShapeHint: (params as any).outputShapeHint ?? "Return JSON output.",
+		assessmentRubricEnabled,
+	};
+}
+
 export class SupervisorAgentRunner {
 	/**
-	 * Multi-agent orchestration pattern:
-	 * - Supervisor (this class) coordinates sub-agents: Planner -> Executor -> Verifier -> (optional repair) -> Finalizer
-	 * - Tools are only available to Executor via ToolRegistry
-	 * - Verifier uses the rubric (when assessment-like output is requested) and always enforces schema/consistency checks
+	 * Supervisor + sub-agent orchestration:
+	 * - The **Super Prompt** (plain English, markdown) defines global governance and quality principles.
+	 * - Sub-agent prompts are intentionally minimal and functional/constraint-driven.
+	 * - Tools are only available to EXECUTOR and REPAIR (via ToolRegistry + AgentRunner).
 	 */
-	static async run(params: {
-		config: AgenticRunConfig;
-		toolRegistry: ToolRegistry;
-		ctx: ToolContext;
-		systemBase: string;
-		goal: string;
-		outputShapeHint: string;
-		assessmentRubricEnabled?: boolean; // default true
-	}): Promise<{ output: JsonValue; trace: AgenticTraceEvent[] }> {
-		const { config, toolRegistry, ctx, systemBase, goal, outputShapeHint } = params;
-		const assessmentRubricEnabled = params.assessmentRubricEnabled ?? true;
+	static async run(params: RunParams): Promise<{ output: JsonValue; trace: AgenticTraceEvent[] }> {
+		const { config, toolRegistry, ctx, featureSystem, featureKey, goal, outputShapeHint, assessmentRubricEnabled } = normalizeParams(params);
 
 		const anthropic = getAnthropicClient();
 		const trace: AgenticTraceEvent[] = [];
 
-		// 1) Planner (no tools): produce a strict JSON plan
-		const plannerSystem =
-			systemBase +
-			"\nYou are the SUPERVISOR PLANNER. Your job is to propose a minimal, safe plan for achieving the goal.\n" +
-			"Rules:\n- Output ONLY JSON in <plan_json>...</plan_json>.\n- Plan must reference ONLY allowed tool names.\n- Each step must have: stepId, toolName (or null), args (object), purpose, stopCondition.\n- Keep the plan short (<= 8 steps).\n";
-
+		const superPrompt = getSupervisorSuperPrompt();
 		const allowedTools = toolRegistry.getToolNames();
+
+		const baseSystem =
+			superPrompt +
+			(featureSystem ? `\n\n## Feature Instructions\n${featureSystem}\n` : "") +
+			`\n\n## Runtime Constraints\n- Allowed tools: ${JSON.stringify(allowedTools)}\n- Budgets: ${JSON.stringify(config.budgets)}\n` +
+			(assessmentRubricEnabled ? "" : "\n- NOTE: Assessment rubric is disabled for this run.\n");
+
+		// 1) PLANNER (no tools): strict plan JSON
+		const plannerSystem =
+			baseSystem +
+			"\n\nROLE: PLANNER\n" +
+			"Output only JSON in <plan_json>...</plan_json>.\n" +
+			"Plan rules: <= 8 steps; use only allowlisted tools; each step includes stepId, toolName (or null), args, purpose, stopCondition.\n";
+
 		const plannerUser =
 			`Goal: ${goal}\n\n` +
-			`Allowed tools: ${JSON.stringify(allowedTools)}\n\n` +
-			`Return a JSON plan that uses only allowed tools.\n` +
-			`Output shape hint for the final deliverable: ${outputShapeHint}\n`;
+			`Output shape hint: ${outputShapeHint}\n\n` +
+			"Return the plan now.";
 
 		const planResp = await anthropic.messages.create({
 			model: config.model,
@@ -75,36 +196,40 @@ export class SupervisorAgentRunner {
 		trace.push({
 			ts: isoNow(),
 			type: "SUB_AGENT",
-			data: {
-				agent: "PLANNER",
-				textPreview: planText.slice(0, 800),
-				usage: (planResp as any).usage ?? null,
-			},
+			data: { agent: "PLANNER", textPreview: planText.slice(0, 800), usage: (planResp as any).usage ?? null },
 		});
 
 		const planJsonRaw = extractBetween(planText, "<plan_json>", "</plan_json>") ?? planText.trim();
 		const planParsed = safeJsonParse(planJsonRaw);
 
-		// If planner fails, fall back to a minimal one-step "use tools as needed" plan (still bounded)
-		const plan = (planParsed && typeof planParsed === "object") ? planParsed : {
-			steps: [
-				{ stepId: "execute", toolName: null, args: {}, purpose: "Execute tools as needed to fulfill goal", stopCondition: "Final JSON output produced" },
-			],
-		};
+		const plan = planParsed && typeof planParsed === "object"
+			? (planParsed as any)
+			: {
+				steps: [
+					{
+						stepId: "execute",
+						toolName: null,
+						args: {},
+						purpose: "Execute allowlisted tools as needed to fulfill the goal",
+						stopCondition: "Final JSON output produced",
+					},
+				],
+			};
 
-		// 2) Executor (tools enabled): run bounded tool-using loop but provide the plan explicitly
+		// 2) EXECUTOR (tools enabled): bounded tool-using loop with plan context
 		const executorSystem =
-			systemBase +
-			"\nYou are the EXECUTION SUB-AGENT. You must follow the Supervisor plan.\n" +
-			"Rules:\n- Use ONLY the provided tools.\n- Never invent IDs.\n- After completing the goal, return ONLY valid JSON in <final_json>...</final_json>.\n";
+			baseSystem +
+			"\n\nROLE: EXECUTOR\n" +
+			"You may call tools. Follow the plan; if a step cannot be completed, explain why in JSON and stop.\n" +
+			"Always ground outputs in tool results. Do not invent IDs/URLs.\n";
 
 		const executorUser =
 			`Goal: ${goal}\n\n` +
-			`Supervisor plan (JSON):\n${JSON.stringify(plan)}\n\n` +
-			`Expected final output shape hint: ${outputShapeHint}\n` +
-			`Proceed step-by-step. If a step has toolName=null, decide which tool to call next.\n`;
+			`Plan: ${JSON.stringify(plan)}\n\n` +
+			`Output shape hint: ${outputShapeHint}\n\n` +
+			"Proceed. When you are ready to finalize, return a single JSON object.";
 
-		const exec = await AgentRunner.run({
+		const execRes = await AgentRunner.run({
 			config,
 			toolRegistry,
 			ctx,
@@ -112,29 +237,27 @@ export class SupervisorAgentRunner {
 			userPrompt: executorUser,
 		});
 
-		trace.push(...exec.trace.map((e) => ({ ...e, data: { ...e.data, subAgent: "EXECUTOR" } })));
+		trace.push(...execRes.trace);
 
-		let candidate = exec.output;
-
-		// 3) Verifier (no tools): check schema/completeness and rubric for assessment-style outputs
+		// 3) VERIFIER (no tools): correctness + schema + rubric checks when relevant
 		const verifierSystem =
-			systemBase +
-			"\nYou are the VERIFIER SUB-AGENT. You validate the candidate output for correctness, completeness, and compliance.\n" +
-			"Rules:\n- Output ONLY JSON in <verify_json>...</verify_json>.\n- If you can repair the JSON deterministically, include correctedOutput.\n- If assessment-like content is present or requested, enforce rubric rules.\n" +
-			(assessmentRubricEnabled ? `\nRubric guidance:\n${RUBRIC}\n` : "");
+			baseSystem +
+			"\n\nROLE: VERIFIER\n" +
+			"You cannot call tools. Verify the candidate output against the goal, constraints, and output shape hint.\n" +
+			"Return ONLY JSON in <verify_json>...</verify_json> with: { pass: boolean, issues: string[], requiredFixes: string[] }.\n";
 
-		const verifyUser =
+		const verifierUser =
 			`Goal: ${goal}\n\n` +
 			`Output shape hint: ${outputShapeHint}\n\n` +
-			`Candidate JSON: ${JSON.stringify(candidate)}\n\n` +
-			`Return: { pass: boolean, issues: string[], correctedOutput?: object }\n`;
+			`Candidate output JSON: ${JSON.stringify(execRes.output)}\n\n` +
+			"Verify now.";
 
 		const verifyResp = await anthropic.messages.create({
 			model: config.model,
-			temperature: 0,
-			max_tokens: 1200,
+			temperature: 0.1,
+			max_tokens: 900,
 			system: verifierSystem,
-			messages: [{ role: "user", content: verifyUser }] as any,
+			messages: [{ role: "user", content: verifierUser }] as any,
 		});
 
 		const verifyText = ((verifyResp as any).content ?? [])
@@ -144,48 +267,52 @@ export class SupervisorAgentRunner {
 		trace.push({
 			ts: isoNow(),
 			type: "SUB_AGENT",
-			data: {
-				agent: "VERIFIER",
-				textPreview: verifyText.slice(0, 800),
-				usage: (verifyResp as any).usage ?? null,
-			},
+			data: { agent: "VERIFIER", textPreview: verifyText.slice(0, 800), usage: (verifyResp as any).usage ?? null },
 		});
 
 		const verifyJsonRaw = extractBetween(verifyText, "<verify_json>", "</verify_json>") ?? verifyText.trim();
 		const verifyParsed = safeJsonParse(verifyJsonRaw) as any;
 
-		if (verifyParsed && verifyParsed.pass === false) {
-			const corrected = verifyParsed.correctedOutput;
-			if (corrected && typeof corrected === "object") {
-				candidate = corrected as JsonValue;
-			} else {
-				// One repair attempt via executor with issues appended
-				const repairUser =
-					`Goal: ${goal}\n\n` +
-					`The verifier found issues:\n${JSON.stringify(verifyParsed.issues ?? [])}\n\n` +
-					`Current candidate JSON:\n${JSON.stringify(candidate)}\n\n` +
-					`Fix the issues and return ONLY valid JSON in <final_json>...</final_json>.\n` +
-					`Output shape hint: ${outputShapeHint}\n`;
+		const pass = !!verifyParsed?.pass;
+		const requiredFixes: string[] = Array.isArray(verifyParsed?.requiredFixes) ? verifyParsed.requiredFixes : [];
 
-				const repaired = await AgentRunner.run({
-					config: { ...config, budgets: { ...config.budgets, maxIterations: Math.max(3, Math.min(6, config.budgets.maxIterations)) } },
-					toolRegistry,
-					ctx,
-					system: executorSystem,
-					userPrompt: repairUser,
-				});
-
-				trace.push(...repaired.trace.map((e) => ({ ...e, data: { ...e.data, subAgent: "EXECUTOR_REPAIR" } })));
-				candidate = repaired.output;
-			}
+		if (pass || requiredFixes.length === 0) {
+			return { output: execRes.output, trace };
 		}
 
-		trace.push({
-			ts: isoNow(),
-			type: "FINAL_OUTPUT",
-			data: { supervisor: true },
+		// 4) REPAIR (tools enabled, limited): apply verifier-directed fixes, then return revised JSON
+		logger.info("SupervisorAgentRunner: verifier failed; attempting repair pass", { requiredFixesCount: requiredFixes.length });
+
+		const repairSystem =
+			baseSystem +
+			"\n\nROLE: REPAIR\n" +
+			"You may call tools. Apply ONLY the required fixes listed. Do not broaden scope.\n" +
+			"Return a single corrected JSON object.";
+
+		const repairUser =
+			`Goal: ${goal}\n\n` +
+			`Required fixes: ${JSON.stringify(requiredFixes)}\n\n` +
+			`Current output JSON: ${JSON.stringify(execRes.output)}\n\n` +
+			"Apply the fixes and return corrected JSON.";
+
+		const repaired = await AgentRunner.run({
+			config: {
+				...config,
+				budgets: {
+					...config.budgets,
+					maxIterations: Math.max(2, Math.min(6, config.budgets.maxIterations)),
+					maxToolCalls: Math.max(5, Math.min(10, config.budgets.maxToolCalls)),
+				},
+			},
+			toolRegistry,
+			ctx,
+			system: repairSystem,
+			userPrompt: repairUser,
 		});
 
-		return { output: candidate as JsonValue, trace };
+		trace.push(...repaired.trace);
+
+		// Final return after repair (a second verifier pass can be added later if needed)
+		return { output: repaired.output, trace };
 	}
 }

@@ -6,7 +6,6 @@ import { ToolRegistry } from "#/agentic/ToolRegistry";
 import { getScenarioSessionTools } from "#/agentic/workflows/scenarioSessionTools";
 import { getFlagSessionTools } from "#/agentic/workflows/flagSessionTools";
 
-const SYSTEM_PROMPT = "You are an agentic workflow orchestrator running inside a backend service.\nYou must achieve the user goal by calling the provided tools.\nRules:\n- Use only the tools provided.\n- Prefer reuse of existing records when possible, if allowed by the metadata.\n- Never invent IDs; always retrieve them via tools.\n- Keep tool inputs minimal and valid.\n- After completing the goal, return ONLY valid JSON in <final_json>...</final_json> matching the requested output shape.";
 
 export class AgenticWorkflowOrchestrationService {
 	static async runScenarioSession(params: {
@@ -56,8 +55,9 @@ export class AgenticWorkflowOrchestrationService {
 			},
 			toolRegistry,
 			ctx,
-			systemBase: SYSTEM_PROMPT,
-			goal: userPrompt,
+			featureKey: "FEATURE_SCENARIO_SESSION",
+			system: "",
+			userPrompt,
 			outputShapeHint: "Return the standard workflow output JSON for this workflow type (agentId, sessionId, signedUrl, scenario/flag, optional battleCard).",
 		});
 
@@ -110,8 +110,9 @@ export class AgenticWorkflowOrchestrationService {
 			},
 			toolRegistry,
 			ctx,
-			systemBase: SYSTEM_PROMPT,
-			goal: userPrompt,
+			featureKey: "FEATURE_FLAG_SESSION",
+			system: "",
+			userPrompt,
 			outputShapeHint: "Return the standard workflow output JSON for this workflow type (agentId, sessionId, signedUrl, scenario/flag, optional battleCard).",
 		});
 
