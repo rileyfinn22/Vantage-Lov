@@ -241,6 +241,12 @@ const app = new Hono<AuthVariable<false>>()
 				return c.json({ error: "Unauthorized" }, 401);
 			}
 
+			// Optional agentic orchestration parameters (query string)
+			const q = c.req.query();
+			const agentic = q.agentic === "true" || q.agentic === "1";
+			const allowReuse = !(q.allowReuse === "false" || q.allowReuse === "0");
+			const maxIterations = q.maxIterations ? Number.parseInt(q.maxIterations, 10) : undefined;
+
 			// Async workflow path (feature flag)
 			if (FEATURES.ASYNC_SESSION_START) {
 				// Create workflow state
@@ -254,6 +260,9 @@ const app = new Hono<AuthVariable<false>>()
 							userId: currentUser.id,
 							salespersonId,
 							scenarioId: isNumericId ? parseInt(scenarioId, 10) : scenarioId,
+							agentic: agentic ? true : false,
+							allowReuse,
+							maxIterations: maxIterations ?? undefined,
 						},
 					})
 					.returning();
@@ -374,6 +383,12 @@ const app = new Hono<AuthVariable<false>>()
 				return c.json({ error: "Unauthorized" }, 401);
 			}
 
+			// Optional agentic orchestration parameters (query string)
+			const q = c.req.query();
+			const agentic = q.agentic === "true" || q.agentic === "1";
+			const allowReuse = !(q.allowReuse === "false" || q.allowReuse === "0");
+			const maxIterations = q.maxIterations ? Number.parseInt(q.maxIterations, 10) : undefined;
+
 			// Async workflow path (feature flag)
 			if (FEATURES.ASYNC_SESSION_START) {
 				// Create workflow state
@@ -387,6 +402,9 @@ const app = new Hono<AuthVariable<false>>()
 							userId: currentUser.id,
 							salespersonId: flagDetails.salesperson.salesperson.id,
 							flagId,
+							agentic: agentic ? true : false,
+							allowReuse,
+							maxIterations: maxIterations ?? undefined,
 						},
 					})
 					.returning();

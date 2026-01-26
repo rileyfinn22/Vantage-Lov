@@ -6,6 +6,7 @@ import * as schema from "#/data/schema";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import { runCalibration, getCalibrationStatus } from "#/services/CalibrationService";
+import { AgenticFeatureOrchestrationService } from "#/services/AgenticFeatureOrchestrationService";
 
 const companyTrainingSchema = z.object({
 	onboardingDocument: z.string().nullable().optional(),
@@ -151,13 +152,34 @@ const app = new Hono<AuthVariable<false>>()
 			return c.json({ error: "No example calls found. Please add at least one example call." }, 400);
 		}
 
+		const agentic = ["1", "true", "yes"].includes(String(c.req.query("agentic") ?? "").toLowerCase());
+		const maxIterationsRaw = c.req.query("maxIterations");
+		const maxIterations = maxIterationsRaw ? Math.min(20, Math.max(3, Number.parseInt(String(maxIterationsRaw), 10))) : 10;
+
 		// Run calibration
-		const result = await runCalibration({
-			companyId,
-			goodCall: exampleGoodCall ?? undefined,
-			averageCall: exampleAverageCall ?? undefined,
-			badCall: exampleBadCall ?? undefined,
-		});
+		const result = agentic
+			? ((await AgenticFeatureOrchestrationService.run({
+					feature: "calibration_run",
+					input: {
+						companyId,
+						goodCall: exampleGoodCall ?? undefined,
+						averageCall: exampleAverageCall ?? undefined,
+						badCall: exampleBadCall ?? undefined,
+					},
+					ctx: {
+						workflowStateId: 0,
+						workflowType: "feature",
+						workflowId: "calibration_run",
+						metadata: { userId: null, companyId },
+					},
+					config: { budgets: { maxIterations } } as any,
+				})).output as any)
+			: await runCalibration({
+					companyId,
+					goodCall: exampleGoodCall ?? undefined,
+					averageCall: exampleAverageCall ?? undefined,
+					badCall: exampleBadCall ?? undefined,
+				});
 
 		if (!result.success) {
 			return c.json({ error: result.error, patternsExtracted: result.patternsExtracted }, 500);

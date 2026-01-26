@@ -18,6 +18,7 @@ import {
 	saveTrainingScenario,
 } from "#/services/BattleCardGenerationService";
 import { generateWeeklyInsightsWithBattleCards } from "#/services/InsightsAggregationService";
+import { AgenticFeatureOrchestrationService } from "#/services/AgenticFeatureOrchestrationService";
 
 // Validation schemas
 
@@ -86,8 +87,24 @@ const app = new Hono<AuthVariable<false>>()
 		const { week } = c.req.valid("json");
 		const weekDate = week ? new Date(week) : new Date();
 
+		const agentic = ["1", "true", "yes"].includes(String(c.req.query("agentic") ?? "").toLowerCase());
+		const maxIterationsRaw = c.req.query("maxIterations");
+		const maxIterations = maxIterationsRaw ? Math.min(20, Math.max(3, Number.parseInt(String(maxIterationsRaw), 10))) : 10;
+
 		// Generate insights with battle cards
-		const insights = await generateWeeklyInsightsWithBattleCards(companyId, weekDate, true);
+		const insights = agentic
+			? ((await AgenticFeatureOrchestrationService.run({
+					feature: "battle_cards_weekly_generate",
+					input: { companyId, weekDateIso: weekDate.toISOString(), generateBattleCards: true },
+					ctx: {
+						workflowStateId: 0,
+						workflowType: "feature",
+						workflowId: "battle_cards_weekly_generate",
+						metadata: { userId: currentUser.id, companyId },
+					},
+					config: { budgets: { maxIterations } } as any,
+				})).output as any)
+			: await generateWeeklyInsightsWithBattleCards(companyId, weekDate, true);
 
 		return c.json({
 			message: "Battle cards generated successfully",

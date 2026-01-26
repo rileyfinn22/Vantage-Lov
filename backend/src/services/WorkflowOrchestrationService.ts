@@ -20,6 +20,7 @@ import {
 	battleCards,
 } from "#/data/schema";
 import { and } from "drizzle-orm";
+import { AgenticWorkflowOrchestrationService } from "#/services/AgenticWorkflowOrchestrationService";
 
 export interface WorkflowStepResult {
 	success: boolean;
@@ -98,6 +99,21 @@ export class WorkflowOrchestrationService {
 
 		if (!salespersonId || !scenarioId) {
 			throw new Error("Missing required metadata: salespersonId or scenarioId");
+		}
+
+
+		// Agentic workflow path (bounded tool-using orchestration)
+		if ((metadata as any).agentic === true) {
+			await this.executeStep(state.id, "agentic_orchestration", async () => {
+				const { output, trace } = await AgenticWorkflowOrchestrationService.runScenarioSession({
+					workflowStateId: state.id,
+					workflowId: String(state.workflowId),
+					metadata: metadata as any,
+				});
+				// Persist trace in step output (workflow result is persisted via tool)
+				return { output, trace };
+			});
+			return;
 		}
 
 		// Step 1: Get scenario details
@@ -256,6 +272,20 @@ export class WorkflowOrchestrationService {
 
 		if (!flagId) {
 			throw new Error("Missing required metadata: flagId");
+		}
+
+
+		// Agentic workflow path (bounded tool-using orchestration)
+		if ((metadata as any).agentic === true) {
+			await this.executeStep(state.id, "agentic_orchestration", async () => {
+				const { output, trace } = await AgenticWorkflowOrchestrationService.runFlagSession({
+					workflowStateId: state.id,
+					workflowId: String(state.workflowId),
+					metadata: metadata as any,
+				});
+				return { output, trace };
+			});
+			return;
 		}
 
 		// Step 1: Get flag details
