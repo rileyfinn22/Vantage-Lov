@@ -1,7 +1,7 @@
 import { ANTHROPIC_MODEL } from "#/lib/anthropic";
 import { logger } from "#/lib/logger";
 import type { ToolContext } from "#/agentic/types";
-import { AgentRunner } from "#/agentic/AgentRunner";
+import { SupervisorAgentRunner } from "#/agentic/SupervisorAgentRunner";
 import { ToolRegistry } from "#/agentic/ToolRegistry";
 import { getScenarioSessionTools } from "#/agentic/workflows/scenarioSessionTools";
 import { getFlagSessionTools } from "#/agentic/workflows/flagSessionTools";
@@ -44,7 +44,7 @@ export class AgenticWorkflowOrchestrationService {
 			.replace("{salespersonId}", String(salespersonId))
 			.replace("{allowReuse}", String(allowReuse));
 
-		const res = await AgentRunner.run({
+		const res = await SupervisorAgentRunner.run({
 			config: {
 				model: ANTHROPIC_MODEL,
 				temperature: 0.2,
@@ -56,8 +56,9 @@ export class AgenticWorkflowOrchestrationService {
 			},
 			toolRegistry,
 			ctx,
-			system: SYSTEM_PROMPT,
-			userPrompt,
+			systemBase: SYSTEM_PROMPT,
+			goal: userPrompt,
+			outputShapeHint: "Return the standard workflow output JSON for this workflow type (agentId, sessionId, signedUrl, scenario/flag, optional battleCard).",
 		});
 
 		return res as any;
@@ -97,7 +98,7 @@ export class AgenticWorkflowOrchestrationService {
 			.replace("{flagId}", String(flagId))
 			.replace("{allowReuse}", String(allowReuse));
 
-		const res = await AgentRunner.run({
+		const res = await SupervisorAgentRunner.run({
 			config: {
 				model: ANTHROPIC_MODEL,
 				temperature: 0.2,
@@ -109,8 +110,9 @@ export class AgenticWorkflowOrchestrationService {
 			},
 			toolRegistry,
 			ctx,
-			system: SYSTEM_PROMPT,
-			userPrompt,
+			systemBase: SYSTEM_PROMPT,
+			goal: userPrompt,
+			outputShapeHint: "Return the standard workflow output JSON for this workflow type (agentId, sessionId, signedUrl, scenario/flag, optional battleCard).",
 		});
 
 		return res as any;

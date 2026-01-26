@@ -3,6 +3,7 @@ export type JsonValue = null | boolean | number | string | JsonValue[] | { [k: s
 export interface AgenticTraceEvent {
 	ts: string; // ISO
 	type:
+		| "SUB_AGENT"
 		| "MODEL_RESPONSE"
 		| "TOOL_CALL"
 		| "TOOL_RESULT"

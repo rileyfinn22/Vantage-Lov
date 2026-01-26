@@ -1,5 +1,5 @@
 import { ANTHROPIC_MODEL } from "#/lib/anthropic";
-import { AgentRunner } from "#/agentic/AgentRunner";
+import { SupervisorAgentRunner } from "#/agentic/SupervisorAgentRunner";
 import { ToolRegistry } from "#/agentic/ToolRegistry";
 import type { AgenticRunConfig, ToolContext, JsonValue } from "#/agentic/types";
 import { getBattleCardsWeeklyTools } from "#/agentic/features/battleCardsWeeklyTools";
@@ -72,7 +72,7 @@ export class AgenticFeatureOrchestrationService {
 		const system = getSystemPrompt(feature);
 		const userPrompt = getUserPrompt(feature, input);
 
-		const { output, trace } = await AgentRunner.run({
+		const { output, trace } = await SupervisorAgentRunner.run({
 			config,
 			toolRegistry,
 			ctx,
