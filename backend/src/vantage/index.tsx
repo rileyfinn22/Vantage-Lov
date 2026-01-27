@@ -11,6 +11,7 @@ import trainingRoutes from "#/api/training/routes";
 import flagsRoutes from "#/api/flags/routes";
 import promptDefaultsRoutes from "#/api/admin/prompt-defaults";
 import battleCardsRoutes from "#/api/battle-cards/routes";
+import agenticRoutes from "#/api/agentic/routes";
 import { myUserHandler, healthHandler } from "#/handlers/api";
 import { logger } from "#/lib/logger";
 
@@ -56,6 +57,7 @@ const app = new Hono<AuthVariable<false>>()
 	.route("/api/notifications", notificationsRoutes)
 	.route("/api/training", trainingRoutes)
 	.route("/api/flags", flagsRoutes)
-	.route("/api/battle-cards", battleCardsRoutes);
+	.route("/api/battle-cards", battleCardsRoutes)
+	.route("/api/agentic", agenticRoutes);
 
 export default app;

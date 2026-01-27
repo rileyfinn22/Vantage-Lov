@@ -16,6 +16,7 @@ import { CompanyAIContextService } from "#/services/CompanyAIContextService";
 import { getCachedAnalysisService } from "#/services/CachedAnalysisService";
 import { saveExtractionResults } from "#/services/ExtractionStorageService";
 import { autoGenerateBattleCardsForCompany } from "#/services/BattleCardGenerationService";
+import { AgenticFeatureOrchestrationService } from "#/services/AgenticFeatureOrchestrationService";
 import { TIMING } from "#/config";
 // Combined rating and skills assessment response - matches updated prompt format
 const RatingWithSkillsResponse = z.object({
@@ -238,6 +239,19 @@ async function lookForUnratedInteractionsCached(cachedService: NonNullable<Retur
 		const companyId = interaction.salespeople?.companyId;
 
 		try {
+			// Agentic platform (Supervisor + sub-agents) path for the entire interaction pipeline
+			if (process.env.AGENTIC_INTERACTION_PIPELINE === "true") {
+				await AgenticFeatureOrchestrationService.run({
+					feature: "interaction_branched_pipeline",
+					input: { interactionId },
+					ctx: { userId: interaction.interactions.associatedUserId ?? 0, companyId: companyId ?? null } as any,
+					config: { budgets: { maxIterations: 10, maxToolCalls: 12, maxTimeMs: 120_000 } },
+				});
+				// Mark processed and continue
+				await db.update(schema.interactions).set({ processedStatus: "processed" }).where(eq(schema.interactions.id, interactionId));
+				continue;
+			}
+
 			// STEP 1: Load company context (The Brain)
 			let companyContextFormatted: string | undefined;
 			if (companyId) {

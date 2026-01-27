@@ -5,12 +5,14 @@ import type { AgenticRunConfig, ToolContext, JsonValue } from "#/agentic/types";
 import { getBattleCardsWeeklyTools } from "#/agentic/features/battleCardsWeeklyTools";
 import { getBattleCardTools } from "#/agentic/features/battleCardTools";
 import { getCalibrationTools } from "#/agentic/features/calibrationTools";
+import { getInteractionPipelineTools } from "#/agentic/features/interactionPipelineTools";
 
 export type AgenticFeatureKey =
 	| "battle_cards_weekly_generate"
 	| "battle_card_generate_from_objection"
 	| "battle_card_generate_from_pain_point"
-	| "calibration_run";
+	| "calibration_run"
+	| "interaction_branched_pipeline";
 
 function getToolsForFeature(feature: AgenticFeatureKey): ToolRegistry {
 	switch (feature) {
@@ -21,6 +23,8 @@ function getToolsForFeature(feature: AgenticFeatureKey): ToolRegistry {
 			return new ToolRegistry(getBattleCardTools());
 		case "calibration_run":
 			return new ToolRegistry(getCalibrationTools());
+		case "interaction_branched_pipeline":
+			return new ToolRegistry(getInteractionPipelineTools());
 		default: {
 			const _exhaustive: never = feature;
 			return _exhaustive;
@@ -37,6 +41,8 @@ function getFeaturePromptKey(feature: AgenticFeatureKey): string {
 			return "FEATURE_BATTLE_CARD_GENERATE";
 		case "calibration_run":
 			return "FEATURE_COMPANY_CALIBRATE";
+		case "interaction_branched_pipeline":
+			return "FEATURE_INTERACTION_PIPELINE";
 		default: {
 			const _exhaustive: never = feature;
 			return _exhaustive;
