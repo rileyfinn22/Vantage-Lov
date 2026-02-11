@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLocation } from 'wouter';
-import { LayoutDashboard, TrendingUp, GraduationCap, Users, Phone, Flag, Settings, Upload } from 'lucide-react';
+import { LayoutDashboard, TrendingUp, GraduationCap, Users, Phone, Flag, Settings, Upload, CalendarCheck } from 'lucide-react';
 
 interface NavItem {
     title: string;
@@ -13,6 +13,7 @@ const mainNavItems: NavItem[] = [
     { title: 'Dashboard', url: '/', icon: <LayoutDashboard className="w-5 h-5" />, roles: ['manager', 'rep'] },
     { title: 'Insights', url: '/insights', icon: <TrendingUp className="w-5 h-5" />, roles: ['manager', 'rep'] },
     { title: 'Training', url: '/training', icon: <GraduationCap className="w-5 h-5" />, roles: ['manager', 'rep'] },
+    { title: 'Meeting Prep', url: '/prep', icon: <CalendarCheck className="w-5 h-5" />, roles: ['manager', 'rep'] },
     { title: 'Team', url: '/team', icon: <Users className="w-5 h-5" />, roles: ['manager'] },
     { title: 'Call Library', url: '/calls', icon: <Phone className="w-5 h-5" />, roles: ['manager', 'rep'] },
     { title: 'Upload Call', url: '/upload-call', icon: <Upload className="w-5 h-5" />, roles: ['manager', 'rep'] },

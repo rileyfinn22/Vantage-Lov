@@ -12,6 +12,7 @@ import ResourceSelector from './components/selectors/ResourceSelector';
 import CompanySelector from './components/selectors/CompanySelector';
 import TabSelector from './components/selectors/TabSelector';
 import SystemPromptSettings from './components/forms/SystemPromptSettings';
+import CRMIntegrations from './components/forms/CRMIntegrations';
 import CompanyContext from './CompanyContext';
 import type { TablesResponse, GenericCRUDTableProps, TabConfig } from './components/types';
 
@@ -49,8 +50,9 @@ export function VantageRefined() {
         { key: 'salespeople', label: 'Salespeople', priority: 1 },
         { key: 'companies', label: 'Companies', priority: 2 },
         { key: 'context', label: 'Company Context', priority: 3 },
-        { key: 'crud', label: 'CRUD', priority: 4 },
-        { key: 'settings', label: 'Prompt Settings', priority: 5 },
+        { key: 'crm', label: 'CRM Integrations', priority: 4 },
+        { key: 'crud', label: 'CRUD', priority: 5 },
+        { key: 'settings', label: 'Prompt Settings', priority: 6 },
     ];
 
     const ourQuery = useQueryClient();
@@ -77,6 +79,8 @@ export function VantageRefined() {
                 {activeTab === 'companies' && <CompanyTable />}
 
                 {activeTab === 'context' && <CompanyContext />}
+
+                {activeTab === 'crm' && <CRMIntegrations />}
 
                 {activeTab === 'crud' && (
                     <>

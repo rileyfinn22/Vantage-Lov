@@ -3,7 +3,7 @@ import { tw } from '#util/tw';
 import { formatDateShort } from '#util';
 import { getBriefFlagTitle } from '#util/flags';
 import { queryFlagData } from '#data/fetchers';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, AlertTriangle, TrendingDown, Target } from 'lucide-react';
 
 // Header Components
 const HeaderSection = tw.div`card bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/20 shadow-sm`;
@@ -18,6 +18,17 @@ interface FlagHeaderProps {
     onNavigate: (direction: 'prev' | 'next') => void;
 }
 
+// Helper to get severity indicator
+function getSeverityBadge(confidence: number) {
+    if (confidence >= 80) {
+        return { label: 'High Priority', class: 'badge-error', icon: AlertTriangle };
+    }
+    if (confidence >= 60) {
+        return { label: 'Medium Priority', class: 'badge-warning', icon: TrendingDown };
+    }
+    return { label: 'Review', class: 'badge-info', icon: Target };
+}
+
 export function FlagHeader({ flagData, salespersonData, relatedInteraction, currentFlagIndex, totalFlags, onNavigate }: FlagHeaderProps) {
     const queryClient = useQueryClient();
 
@@ -25,6 +36,11 @@ export function FlagHeader({ flagData, salespersonData, relatedInteraction, curr
     const prospectName = relatedInteraction?.metadata?.prospect?.name;
     const prospectCompanyRaw = relatedInteraction?.metadata?.prospect?.company;
     const prospectCompany = prospectCompanyRaw && prospectCompanyRaw.toLowerCase() !== 'not specified' ? prospectCompanyRaw : null;
+
+    // Extract confidence and metrics
+    const confidence = flagData.flagData?.confidenceOutOf100 ?? 0;
+    const severity = getSeverityBadge(confidence);
+    const SeverityIcon = severity.icon;
 
     // Calculate adjacent flag IDs for prefetching
     const prevFlagId = currentFlagIndex > 0 ? salespersonData?.flags?.[currentFlagIndex - 1]?.id : null;
@@ -48,11 +64,34 @@ export function FlagHeader({ flagData, salespersonData, relatedInteraction, curr
                                     : (prospectName ?? prospectCompany)}
                             </div>
                         )}
-                        <h1 className="text-3xl font-bold mb-2">{getBriefFlagTitle(flagData)}</h1>
+                        <div className="flex items-center gap-3 mb-2">
+                            <h1 className="text-3xl font-bold">{getBriefFlagTitle(flagData)}</h1>
+                            {/* Severity Badge */}
+                            <div className={`badge ${severity.class} gap-1`}>
+                                <SeverityIcon className="w-3 h-3" />
+                                {severity.label}
+                            </div>
+                        </div>
                         <p className="text-sm text-base-content/70 mb-3">
                             {salespersonData?.salesperson?.firstName} {salespersonData?.salesperson?.lastName} • Created:{' '}
                             {formatDateShort(flagData.createdAt) || 'Unknown'}
                         </p>
+
+                        {/* Quick Metrics Row */}
+                        <div className="flex items-center gap-4 mt-3">
+                            <div className="flex items-center gap-2 bg-base-300 rounded-lg px-3 py-1.5">
+                                <span className="text-xs text-base-content/60">Confidence:</span>
+                                <span className={`font-bold ${confidence >= 80 ? 'text-success' : confidence >= 60 ? 'text-warning' : 'text-error'}`}>
+                                    {confidence}%
+                                </span>
+                            </div>
+                            {flagData.flagData?.timestamps?.start && (
+                                <div className="flex items-center gap-2 bg-base-300 rounded-lg px-3 py-1.5">
+                                    <span className="text-xs text-base-content/60">Timestamp:</span>
+                                    <span className="font-mono text-sm">{flagData.flagData.timestamps.start}</span>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     <NavigationControls>

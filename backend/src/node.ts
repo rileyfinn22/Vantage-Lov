@@ -3,13 +3,13 @@
 import { config } from "dotenv";
 config();
 
-// IMPORTANT: This import must be first to initialize OpenTelemetry tracing
-import "./instrumentation";
+// IMPORTANT: This import must be first to initialize Sentry and OpenTelemetry tracing
+import { Sentry } from "./instrumentation";
 
 import { serve } from "@hono/node-server";
 import { createServer as createHttpsServer } from "node:https";
 import { createServer as createHttpServer } from "node:http";
-import { existsSync, globSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import app from ".";
 import { cwd } from "node:process";
 import { logger } from "#/lib/logger";
@@ -27,7 +27,7 @@ let serverStartTimer: NodeJS.Timeout | null = null;
 const port = process.env.PORT ? Number(process.env.PORT) : SERVER.DEFAULT_PORT;
 logger.info({ port, cwd: cwd() }, "Server configuration");
 
-logger.debug({ pems: globSync("../*.pem") }, "Certificate files found");
+logger.debug({ pems: readdirSync("..").filter((f) => f.endsWith(".pem")) }, "Certificate files found");
 
 const keyPath = "../localhost-key.pem";
 
@@ -52,18 +52,27 @@ if (useHttps) {
 
 const server = serve({
 	port,
+	hostname: "0.0.0.0",
 	fetch: app.fetch,
 	...options,
 });
 
 // Graceful shutdown handler
-function shutdown(signal: NodeJS.Signals) {
+async function shutdown(signal: NodeJS.Signals) {
 	if (isShuttingDown) return; // Prevent multiple shutdown attempts
 
 	logger.info({ signal }, "Shutdown signal received");
 	isShuttingDown = true;
 
 	stopBackgroundJobs();
+
+	// Flush Sentry events before shutdown
+	try {
+		await Sentry.close(2000);
+		logger.info("Sentry flushed successfully");
+	} catch (err) {
+		logger.error({ err }, "Error flushing Sentry");
+	}
 
 	server.close((err) => {
 		if (err) {
@@ -116,6 +125,7 @@ function startBackgroundJobs() {
 		lookForUnprocessedFiles()
 			.catch((error) => {
 				logger.error({ error }, "Error in transcript processing job");
+				Sentry.captureException(error);
 			})
 			.finally(() => {
 				if (!isShuttingDown) {
@@ -132,6 +142,7 @@ function startBackgroundJobs() {
 		lookForUnratedInteractions()
 			.catch((error) => {
 				logger.error({ error }, "Error in rating/flagging job");
+				Sentry.captureException(error);
 			})
 			.finally(() => {
 				if (!isShuttingDown) {

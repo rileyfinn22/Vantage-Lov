@@ -3,6 +3,7 @@ import type { BattleCard as BattleCardType, UpdateBattleCardInput } from '#data/
 import { useUpdateBattleCard } from '#data/battle-cards';
 import { useState } from 'react';
 import { useLocation } from 'wouter';
+import { useMySalesData } from '#util/useMe';
 
 interface EditableBattleCardProps {
     battleCard: BattleCardType;
@@ -28,6 +29,7 @@ export function EditableBattleCard({
     const [editApproach, setEditApproach] = useState<string[]>([]);
 
     const { mutate: updateBattleCard, isPending: isUpdating } = useUpdateBattleCard();
+    const { data: salesData } = useMySalesData();
 
     const getPhaseColor = (phase: string) => {
         switch (phase) {
@@ -55,8 +57,8 @@ export function EditableBattleCard({
     };
 
     const handlePractice = () => {
-        if (scenarioId) {
-            navigate(`/salesperson/1/training/${scenarioId}`);
+        if (scenarioId && salesData?.salesperson?.id) {
+            navigate(`/salesperson/${salesData.salesperson.id}/training/${scenarioId}`);
         }
     };
 

@@ -1,12 +1,28 @@
 /**
- * OpenTelemetry Instrumentation for Signoz
+ * Instrumentation for Sentry and OpenTelemetry (Signoz)
  *
  * This file MUST be imported first, before any other application code.
- * It initializes the OpenTelemetry SDK with Signoz tracing and logging.
+ * It initializes Sentry for error tracking and OpenTelemetry SDK with Signoz tracing.
  *
  * Environment variables required:
- * - SIGNOZ_KEY
+ * - SENTRY_DSN (optional - Sentry error tracking)
+ * - SIGNOZ_KEY (optional - OpenTelemetry tracing)
  */
+import * as Sentry from "@sentry/node";
+
+// Initialize Sentry for error tracking
+const SENTRY_DSN = process.env.SENTRY_DSN ?? "https://17c46333a8d41f362ebf917d04d9545f@o4510833354276864.ingest.us.sentry.io/4510833354604544";
+
+Sentry.init({
+	dsn: SENTRY_DSN,
+	environment: process.env.NODE_ENV ?? "development",
+	release: process.env.npm_package_version,
+	sendDefaultPii: true,
+	tracesSampleRate: process.env.NODE_ENV === "production" ? 0.1 : 1.0,
+});
+
+console.log("Sentry error tracking initialized");
+
 import { NodeSDK } from "@opentelemetry/sdk-node";
 import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-proto";
@@ -83,3 +99,6 @@ if (SIGNOZ_KEY) {
 } else {
 	console.log("Signoz credentials not found - tracing and logging disabled");
 }
+
+// Export Sentry for use elsewhere in the application
+export { Sentry };

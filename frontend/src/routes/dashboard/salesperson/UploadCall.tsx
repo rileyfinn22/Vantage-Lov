@@ -2,13 +2,15 @@ import { useState } from 'react';
 import { Upload, CheckCircle2, FileAudio, FileVideo, AlertCircle } from 'lucide-react';
 import { addNotification } from '#/routes/dashboard/layout/Notifications';
 import { useLocation } from 'wouter';
+import MediaPlayer from '#/components/MediaPlayer';
+import { uploadFileInChunks } from '#/util/chunkedUpload';
 
 export function UploadCall() {
     const [_location, navigate] = useLocation();
     const [isUploading, setIsUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [uploadComplete, setUploadComplete] = useState(false);
-    const [uploadedFileInfo, setUploadedFileInfo] = useState<{ fileName: string; fileId: number } | null>(null);
+    const [uploadedFileInfo, setUploadedFileInfo] = useState<{ fileName: string; fileId: number; mimeType: string } | null>(null);
     const [dragActive, setDragActive] = useState(false);
 
     const handleFileValidation = (file: File): string | null => {
@@ -21,12 +23,11 @@ export function UploadCall() {
             return 'Please upload an audio or video file (mp3, wav, m4a, aac, mp4, mov, avi, mkv, webm)';
         }
 
-        // Check file size (2GB for video, 100MB for audio)
-        const isVideoFile = isVideo || /\.(mp4|mov|avi|mkv|webm)$/i.test(file.name);
-        const maxSize = isVideoFile ? 2 * 1024 * 1024 * 1024 : 100 * 1024 * 1024;
+        // Check file size (2GB for both video and audio)
+        const maxSize = 2 * 1024 * 1024 * 1024; // 2GB
         if (file.size > maxSize) {
-            const maxSizeMB = Math.floor(maxSize / (1024 * 1024));
-            return `File size must be less than ${maxSizeMB}MB`;
+            const maxSizeGB = maxSize / (1024 * 1024 * 1024);
+            return `File size must be less than ${maxSizeGB}GB`;
         }
 
         return null;
@@ -49,33 +50,27 @@ export function UploadCall() {
         setUploadComplete(false);
 
         try {
-            // Create form data for upload
-            const formData = new FormData();
-            formData.append('file', file);
+            // Use chunked upload for reliable large file uploads
+            const result = await uploadFileInChunks(
+                file,
+                (progress) => {
+                    setUploadProgress(progress.percentage);
+                }
+            );
 
-            setUploadProgress(30);
-
-            // Upload to backend using raw fetch (FormData doesn't work well with Hono client)
-            const uploadResponse = await fetch('/vantage/api/upload/local', {
-                method: 'POST',
-                body: formData,
-                credentials: 'include',
-            });
-
-            if (!uploadResponse.ok) {
-                const errorData = await uploadResponse.json();
-                throw new Error(errorData.error || 'Failed to upload file');
+            if (result.success && result.fileId) {
+                setUploadProgress(100);
+                setUploadedFileInfo({
+                    fileName: file.name,
+                    fileId: result.fileId,
+                    mimeType: file.type,
+                });
+                setUploadComplete(true);
+                addNotification('Call uploaded successfully - analysis in progress', 'success');
+            } else {
+                addNotification(`Upload failed: ${result.error ?? 'Unknown error'}`, 'error');
+                setUploadProgress(0);
             }
-
-            const result = await uploadResponse.json();
-
-            setUploadProgress(100);
-            setUploadedFileInfo({
-                fileName: file.name,
-                fileId: result.fileId,
-            });
-            setUploadComplete(true);
-            addNotification('Call uploaded successfully - analysis in progress', 'success');
         } catch (error) {
             console.error('Upload error:', error);
             addNotification(`Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
@@ -196,7 +191,7 @@ export function UploadCall() {
                         <div className="mt-4 flex items-start gap-2 text-sm text-base-content/70">
                             <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                             <div>
-                                <p>Maximum file sizes: 100MB for audio files, 2GB for video files</p>
+                                <p>Maximum file size: 2GB</p>
                             </div>
                         </div>
                     </div>
@@ -217,20 +212,31 @@ export function UploadCall() {
 
                             {/* Uploaded File Info */}
                             {uploadedFileInfo && (
-                                <div className="card bg-base-300 shadow">
-                                    <div className="card-body py-4">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
-                                                <FileAudio className="w-5 h-5 text-primary" />
-                                                <div className="text-left">
-                                                    <p className="font-medium">{uploadedFileInfo.fileName}</p>
-                                                    <p className="text-xs text-base-content/60">File ID: {uploadedFileInfo.fileId}</p>
+                                <>
+                                    <div className="card bg-base-300 shadow">
+                                        <div className="card-body py-4">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-3">
+                                                    {uploadedFileInfo.mimeType.startsWith('video/') ? (
+                                                        <FileVideo className="w-5 h-5 text-primary" />
+                                                    ) : (
+                                                        <FileAudio className="w-5 h-5 text-primary" />
+                                                    )}
+                                                    <div className="text-left">
+                                                        <p className="font-medium">{uploadedFileInfo.fileName}</p>
+                                                        <p className="text-xs text-base-content/60">File ID: {uploadedFileInfo.fileId}</p>
+                                                    </div>
                                                 </div>
+                                                <div className="badge badge-info">Processing</div>
                                             </div>
-                                            <div className="badge badge-info">Processing</div>
                                         </div>
                                     </div>
-                                </div>
+
+                                    {/* Playback */}
+                                    <div className="w-full max-w-lg mx-auto">
+                                        <MediaPlayer fileId={uploadedFileInfo.fileId} mimeType={uploadedFileInfo.mimeType} />
+                                    </div>
+                                </>
                             )}
 
                             {/* Action Buttons */}

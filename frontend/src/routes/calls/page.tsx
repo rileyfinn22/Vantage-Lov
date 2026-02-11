@@ -158,7 +158,7 @@ interface CompletedTrainingItem {
 function CallDetailView({ call, onClose }: { call: Call; onClose: () => void }) {
     const [, navigate] = useLocation();
     const [isTranscriptExpanded, setIsTranscriptExpanded] = useState(false);
-    const mediaFile = call.files?.[0];
+    const mediaFile = call.files?.find(f => f.mimeType?.startsWith('video/')) ?? call.files?.[0];
     const rating = call.ratings?.[0];
     const skills = call.skillsAssessments?.[0];
     const callFlags = call.flags ?? [];
@@ -542,7 +542,7 @@ function CallDetailView({ call, onClose }: { call: Call; onClose: () => void }) 
 function CallCard({ call, onClick }: { call: Call; onClick: () => void }) {
     const rating = call.ratings?.[0];
     const flagCount = call.flags?.length ?? 0;
-    const mediaFile = call.files?.[0];
+    const mediaFile = call.files?.find(f => f.mimeType?.startsWith('video/')) ?? call.files?.[0];
     const isVideo = mediaFile?.mimeType?.startsWith('video/');
     const prospect = call.metadata?.prospect;
     const salesperson = call.salesperson;

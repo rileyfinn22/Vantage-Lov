@@ -462,23 +462,49 @@ export async function generateBattleCardsForObjections(
 	for (const objection of objections) {
 		try {
 			// Check if battle card already exists for this objection
-			const exists = await battleCardExistsForSource("objection", objection.id);
-			if (exists) {
-				logger.info({ objectionId: objection.id, title: objection.title }, "Battle card already exists, skipping");
-				continue;
+			const existingBattleCard = await db
+				.select()
+				.from(schema.battleCards)
+				.where(and(eq(schema.battleCards.sourceType, "objection"), eq(schema.battleCards.sourceId, objection.id)))
+				.limit(1);
+
+			let battleCardId: number;
+			let battleCardContent: BattleCardContent;
+
+			if (existingBattleCard.length > 0) {
+				// Battle card exists - check if it needs a scenario
+				const existing = existingBattleCard[0];
+				if (existing.linkedScenarioId) {
+					logger.info({ objectionId: objection.id, title: objection.title }, "Battle card with scenario already exists, skipping");
+					continue;
+				}
+
+				// Battle card exists but no scenario - generate scenario only
+				logger.info({ battleCardId: existing.id, title: objection.title }, "Battle card exists without scenario, generating scenario");
+				battleCardId = existing.id;
+				battleCardContent = {
+					title: existing.title,
+					challenge: existing.challenge,
+					phase: existing.phase as "outreach" | "discovery" | "demo" | "close",
+					strategy: existing.strategy,
+					approach: existing.approach,
+					script: existing.script,
+					nextStep: existing.nextStep,
+				};
+			} else {
+				// No battle card exists - generate both
+				logger.info({ objectionId: objection.id, title: objection.title }, "Generating battle card for objection");
+
+				// Generate the battle card content
+				battleCardContent = await generateBattleCardFromObjection(objection, companyContext);
+
+				// Save to database
+				battleCardId = await saveBattleCard(companyId, battleCardContent, "objection", objection.id, {
+					frequency: objection.frequency,
+					successRate: objection.successRate,
+					impactScore: objection.impactScore,
+				});
 			}
-
-			logger.info({ objectionId: objection.id, title: objection.title }, "Generating battle card for objection");
-
-			// Generate the battle card content
-			const battleCardContent = await generateBattleCardFromObjection(objection, companyContext);
-
-			// Save to database
-			const battleCardId = await saveBattleCard(companyId, battleCardContent, "objection", objection.id, {
-				frequency: objection.frequency,
-				successRate: objection.successRate,
-				impactScore: objection.impactScore,
-			});
 
 			// Generate and save training scenario
 			const scenarioContent = await generateTrainingScenario(battleCardContent, "objection");
@@ -498,7 +524,7 @@ export async function generateBattleCardsForObjections(
 
 /**
  * Generate battle cards and training scenarios for top pain points
- * Skips items that already have battle cards
+ * Also generates scenarios for existing battle cards that don't have them
  */
 export async function generateBattleCardsForPainPoints(
 	companyId: number,
@@ -510,23 +536,49 @@ export async function generateBattleCardsForPainPoints(
 	for (const painPoint of painPoints) {
 		try {
 			// Check if battle card already exists for this pain point
-			const exists = await battleCardExistsForSource("pain_point", painPoint.id);
-			if (exists) {
-				logger.info({ painPointId: painPoint.id, title: painPoint.title }, "Battle card already exists, skipping");
-				continue;
+			const existingBattleCard = await db
+				.select()
+				.from(schema.battleCards)
+				.where(and(eq(schema.battleCards.sourceType, "pain_point"), eq(schema.battleCards.sourceId, painPoint.id)))
+				.limit(1);
+
+			let battleCardId: number;
+			let battleCardContent: BattleCardContent;
+
+			if (existingBattleCard.length > 0) {
+				// Battle card exists - check if it needs a scenario
+				const existing = existingBattleCard[0];
+				if (existing.linkedScenarioId) {
+					logger.info({ painPointId: painPoint.id, title: painPoint.title }, "Battle card with scenario already exists, skipping");
+					continue;
+				}
+
+				// Battle card exists but no scenario - generate scenario only
+				logger.info({ battleCardId: existing.id, title: painPoint.title }, "Battle card exists without scenario, generating scenario");
+				battleCardId = existing.id;
+				battleCardContent = {
+					title: existing.title,
+					challenge: existing.challenge,
+					phase: existing.phase as "outreach" | "discovery" | "demo" | "close",
+					strategy: existing.strategy,
+					approach: existing.approach,
+					script: existing.script,
+					nextStep: existing.nextStep,
+				};
+			} else {
+				// No battle card exists - generate both
+				logger.info({ painPointId: painPoint.id, title: painPoint.title }, "Generating battle card for pain point");
+
+				// Generate the battle card content
+				battleCardContent = await generateBattleCardFromPainPoint(painPoint, companyContext);
+
+				// Save to database
+				battleCardId = await saveBattleCard(companyId, battleCardContent, "pain_point", painPoint.id, {
+					frequency: painPoint.frequency,
+					successRate: painPoint.resolutionRate,
+					impactScore: painPoint.impactScore,
+				});
 			}
-
-			logger.info({ painPointId: painPoint.id, title: painPoint.title }, "Generating battle card for pain point");
-
-			// Generate the battle card content
-			const battleCardContent = await generateBattleCardFromPainPoint(painPoint, companyContext);
-
-			// Save to database
-			const battleCardId = await saveBattleCard(companyId, battleCardContent, "pain_point", painPoint.id, {
-				frequency: painPoint.frequency,
-				successRate: painPoint.resolutionRate,
-				impactScore: painPoint.impactScore,
-			});
 
 			// Generate and save training scenario
 			const scenarioContent = await generateTrainingScenario(battleCardContent, "pain_point");

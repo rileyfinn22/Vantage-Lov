@@ -281,7 +281,7 @@ export class SupervisorAgentRunner {
 		}
 
 		// 4) REPAIR (tools enabled, limited): apply verifier-directed fixes, then return revised JSON
-		logger.info("SupervisorAgentRunner: verifier failed; attempting repair pass", { requiredFixesCount: requiredFixes.length });
+		logger.info({ requiredFixesCount: requiredFixes.length }, "SupervisorAgentRunner: verifier failed; attempting repair pass");
 
 		const repairSystem =
 			baseSystem +

@@ -105,31 +105,12 @@ export function TrainingFlagDetail({ id }: { id: string }) {
                 </Section>
             </Grid>
 
-            {/* Analysis Row */}
-            <Grid>
-                {/* Revenue Impact */}
-                <Section>
-                    <div className="card-body">
-                        <FlagAnalysis flagData={flagData} />
-                    </div>
-                </Section>
-
-                {/* Why It Matters */}
-                <Section className="border-l-4 border-l-primary">
-                    <div className="card-body">
-                        <h2 className="text-lg font-semibold mb-4">Why This Matters</h2>
-                        <p className="text-sm leading-relaxed text-base-content/80">
-                            {flagData.flagData?.why_this_matters
-                                ? flagData.flagData.why_this_matters
-                                      .split(/[.!?]+/)
-                                      .slice(0, 4)
-                                      .join('. ')
-                                      .trim() + '.'
-                                : 'No information available'}
-                        </p>
-                    </div>
-                </Section>
-            </Grid>
+            {/* Analysis Section - What Happened, Why This Matters, Revenue Impact */}
+            <Section>
+                <div className="card-body">
+                    <FlagAnalysis flagData={flagData} />
+                </div>
+            </Section>
 
             {/* Better Responses - Full Width */}
             <Section>

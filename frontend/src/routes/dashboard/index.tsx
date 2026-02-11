@@ -16,6 +16,9 @@ import { TrainingPage } from '../training/page';
 import { TeamPage } from '../team/page';
 import { CallLibraryPage } from '../calls/page';
 import { FlagTuningPage } from '../flag-tuning/page';
+import { PrepListPage } from '../prep/page';
+import { NewPrepPage } from '../prep/NewPrepPage';
+import { PrepDetailPage } from '../prep/PrepDetailPage';
 
 // Lazy load admin routes for code splitting
 const AdminRoutes = lazy(() => import('../admin/index'));
@@ -55,6 +58,11 @@ export default function SlopRoutes() {
                         <Route path="/calls" component={CallLibraryPage} />
                         <Route path="/upload-call" component={UploadCall} />
                         <Route path="/flag-tuning" component={FlagTuningPage} />
+                        <Route path="/prep" component={PrepListPage} />
+                        <Route path="/prep/new" component={NewPrepPage} />
+                        <Route path="/prep/:prepId">
+                            {(params) => <PrepDetailPage prepId={params.prepId} />}
+                        </Route>
                         <Route path="/salesperson/:salespersonId/training/:scenarioId" component={ScenarioTrainingSession} />
                         <Route path="/salesperson/:id/skills/:skillKey" component={SkillTraining} />
                         <Route path="/salesperson/:id">

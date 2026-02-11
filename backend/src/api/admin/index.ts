@@ -12,7 +12,9 @@ import promptDefaultsRoutes from "./prompt-defaults";
 
 /**
  * Admin routes with authentication middleware
- * All routes under /api/admin require site admin role
+ * All routes under /api/admin require either:
+ * - Site admin role (can see all or their company based on association)
+ * - Company admin role (can see only their company)
  */
 const app = new Hono<AuthVariable<false>>()
 	.use("*", async (c, next) => {
@@ -21,11 +23,15 @@ const app = new Hono<AuthVariable<false>>()
 			return c.json({ error: "Unauthorized" }, 401);
 		}
 
+		// Check for site admin role
 		const userRoles = await db.select().from(schema.authUserRoles).where(eq(schema.authUserRoles.userId, currentUser.id));
-
 		const isSiteAdmin = userRoles.some((role) => role.role === "admin");
 
-		if (!isSiteAdmin) {
+		// Check for company admin role
+		const companyRoles = await db.select().from(schema.companyUserRoles).where(eq(schema.companyUserRoles.userId, currentUser.id));
+		const isCompanyAdmin = companyRoles.some((role) => role.role === "admin");
+
+		if (!isSiteAdmin && !isCompanyAdmin) {
 			return c.json({ error: "Forbidden: Admin access required" }, 403);
 		}
 

@@ -45,7 +45,7 @@ export function getScenarioSessionTools(): ToolDefinition[] {
 						eq(trainingSessionsCompleted.status, "in_progress"),
 					),
 				});
-				return session ?? null;
+				return (session ?? null) as JsonValue;
 			},
 		},
 		{
@@ -130,7 +130,7 @@ export function getScenarioSessionTools(): ToolDefinition[] {
 			inputSchema: { type: "object", properties: { scenarioDbId: { type: "number" } }, required: ["scenarioDbId"] },
 			handler: async (args: any): Promise<JsonValue> => {
 				const [linkedBattleCard] = await db.select().from(battleCards).where(eq(battleCards.linkedScenarioId, Number(args.scenarioDbId))).limit(1);
-				return linkedBattleCard ?? null;
+				return (linkedBattleCard ?? null) as any;
 			},
 		},
 		{

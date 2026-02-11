@@ -18,5 +18,6 @@
 		"outDir": "./dist",
 		"forceConsistentCasingInFileNames": true
 	},
-	"include": ["src/**/*", "utils/**/*.ts"]
+	"include": ["src/**/*", "utils/**/*.ts"],
+	"exclude": ["**/*.test.ts", "src/test/**/*"]
 }

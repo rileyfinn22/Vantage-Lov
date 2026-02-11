@@ -1,14 +1,59 @@
 import { logger } from "#/lib/logger";
-import { existsSync } from "node:fs";
+import { existsSync, accessSync, constants } from "node:fs";
+import { execSync } from "node:child_process";
 
 // Lazy-load ffmpeg to avoid loading native modules on unsupported platforms (e.g., Windows ARM64)
 let ffmpegInstance: typeof import("fluent-ffmpeg") | null = null;
 
+/**
+ * Find executable path - prefers system binaries over npm packages
+ */
+function findExecutable(name: string, npmPath: string): string {
+	// Try system paths first (more reliable in Docker)
+	const systemPaths = [`/usr/bin/${name}`, `/usr/local/bin/${name}`];
+	for (const path of systemPaths) {
+		try {
+			accessSync(path, constants.X_OK);
+			logger.debug({ name, path }, "Using system binary");
+			return path;
+		} catch {
+			// Not found or not executable
+		}
+	}
+
+	// Try to find via 'which' command
+	try {
+		const whichPath = execSync(`which ${name}`, { encoding: "utf-8" }).trim();
+		if (whichPath) {
+			accessSync(whichPath, constants.X_OK);
+			logger.debug({ name, path: whichPath }, "Using binary from PATH");
+			return whichPath;
+		}
+	} catch {
+		// which command failed
+	}
+
+	// Fall back to npm package path
+	try {
+		accessSync(npmPath, constants.X_OK);
+		logger.debug({ name, path: npmPath }, "Using npm package binary");
+		return npmPath;
+	} catch {
+		logger.warn({ name, npmPath }, "npm binary not executable, using path anyway");
+		return npmPath;
+	}
+}
+
 async function getFfmpeg() {
 	if (!ffmpegInstance) {
-		const [ffmpeg, ffmpegInstaller] = await Promise.all([import("fluent-ffmpeg"), import("@ffmpeg-installer/ffmpeg")]);
+		const [ffmpeg, ffmpegInstaller, ffprobeInstaller] = await Promise.all([
+			import("fluent-ffmpeg"),
+			import("@ffmpeg-installer/ffmpeg"),
+			import("ffprobe-installer"),
+		]);
 		ffmpegInstance = ffmpeg.default;
-		ffmpegInstance.setFfmpegPath(ffmpegInstaller.default.path);
+		ffmpegInstance.setFfmpegPath(findExecutable("ffmpeg", ffmpegInstaller.default.path));
+		ffmpegInstance.setFfprobePath(findExecutable("ffprobe", ffprobeInstaller.default.path));
 	}
 	return ffmpegInstance;
 }

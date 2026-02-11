@@ -138,6 +138,17 @@ export async function lookForUnprocessedFiles() {
 				const isVideo = isVideoFile(file.mimeType, file.fileName);
 				logger.info({ interactionId: interaction.id, fileName: file.fileName, isVideo }, "Starting to process interaction");
 
+				// Verify file exists before processing (handles race condition with chunked uploads)
+				const fullPath = join(process.cwd(), "uploads", file.filePath);
+				if (!existsSync(fullPath)) {
+					// Wait a bit and check again - file might still be writing
+					await new Promise((resolve) => setTimeout(resolve, 5000));
+					if (!existsSync(fullPath)) {
+						logger.warn({ interactionId: interaction.id, filePath: fullPath }, "File not found, skipping for now");
+						continue; // Skip this one, will be picked up on next run
+					}
+				}
+
 				// Mark as processing
 				await db.update(schema.interactions).set({ processedStatus: "processing" }).where(eq(schema.interactions.id, interaction.id));
 
@@ -156,7 +167,7 @@ export async function lookForUnprocessedFiles() {
 							.insert(schema.bigfiles)
 							.values({
 								fileName: `${file.fileName.replace(/\.[^.]+$/, "")}_audio.mp3`,
-								filePath: extractedAudioPath,
+								filePath: file.filePath.replace(/\.[^.]+$/, ".mp3"),
 								mimeType: "audio/mpeg",
 								interactionId: interaction.id,
 							})

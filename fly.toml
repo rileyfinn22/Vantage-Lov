@@ -1,0 +1,38 @@
+# fly.toml - Fly.io configuration for Vantage.ai
+
+app = "vantage-ai-app"
+primary_region = "sjc"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  NODE_ENV = "production"
+  PORT = "3030"
+  TENANT_NAME = "production"
+  # Allow large file uploads (2GB for videos)
+  FLY_REQUEST_BODY_MAX_SIZE = "2147483648"
+
+[mounts]
+  source = "vantage_uploads"
+  destination = "/app/backend/uploads"
+
+[http_service]
+  internal_port = 3030
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+  # Increase timeout for large file uploads (10 minutes)
+  idle_timeout = "10m"
+  request_timeout = "10m"
+
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 200
+    hard_limit = 250
+
+[[vm]]
+  memory = "4gb"
+  cpu_kind = "performance"
+  cpus = 2

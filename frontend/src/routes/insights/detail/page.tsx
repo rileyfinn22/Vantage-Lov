@@ -77,9 +77,9 @@ export function InsightDetailPage() {
     };
 
     const handleStartTraining = () => {
-        if (!battleCard) return;
+        if (!battleCard || !salesData?.salesperson?.id) return;
 
-        const salespersonId = salesData?.salesperson?.id ?? 1;
+        const salespersonId = salesData.salesperson.id;
 
         // If scenario already exists, navigate directly
         if (scenario) {

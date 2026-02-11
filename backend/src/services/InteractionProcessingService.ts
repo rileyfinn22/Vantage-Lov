@@ -55,12 +55,10 @@ export async function loadInteractionContext(params: { interactionId: number }):
 		throw new Error("Interaction not found.");
 	}
 
-	// @ts-expect-error drizzle join shape
-	const interaction = row.interactions ?? row;
-	// @ts-expect-error drizzle join shape
+	const interaction = row.interactions;
 	const salesperson = row.salespeople;
 
-	const textToAnalyze = computeRawInteractionText(interaction.interactions);
+	const textToAnalyze = computeRawInteractionText(interaction);
 	if (!textToAnalyze || textToAnalyze.trim().length < 20) {
 		throw new Error("Transcript text too short / empty.");
 	}
@@ -87,15 +85,20 @@ export async function loadInteractionContext(params: { interactionId: number }):
  */
 export async function loadAnalysisPrompts(): Promise<AnalysisPromptPack> {
 	async function getPrompt(promptType: "rating" | "flagging" | "extraction" | "call_persona"): Promise<string> {
+		const value = await selectPromptWithFallback(promptType);
+		if (value) {
+			return typeof value === "string" ? value : JSON.stringify(value);
+		}
+		// Use fallback defaults
 		switch (promptType) {
 			case "rating":
-				return selectPromptWithFallback("rating", RATING_SYSTEM_INSTRUCTIONS);
+				return RATING_SYSTEM_INSTRUCTIONS;
 			case "flagging":
-				return selectPromptWithFallback("flagging", FLAGGING_SYSTEM_INSTRUCTIONS);
+				return FLAGGING_SYSTEM_INSTRUCTIONS;
 			case "extraction":
-				return selectPromptWithFallback("extraction", EXTRACTION_SYSTEM_INSTRUCTIONS);
+				return EXTRACTION_SYSTEM_INSTRUCTIONS;
 			case "call_persona":
-				return selectPromptWithFallback("call_persona", PERSONA_SYSTEM_INSTRUCTIONS);
+				return PERSONA_SYSTEM_INSTRUCTIONS;
 		}
 	}
 
@@ -146,11 +149,12 @@ export async function runBranchedAnalysis(params: {
 /**
  * Persist the rating result.
  */
-export async function persistRating(params: { interactionId: number; overallRating: number }): Promise<{ saved: boolean }> {
+export async function persistRating(params: { interactionId: number; overallRating: number; blurb?: string }): Promise<{ saved: boolean }> {
 	await db.insert(schema.ratings).values({
 		interactionId: params.interactionId,
 		type: "ollama",
 		value: params.overallRating,
+		blurb: params.blurb ?? `Rating: ${params.overallRating}/100`,
 	});
 	return { saved: true };
 }
@@ -167,6 +171,11 @@ export async function persistFlags(params: {
 	const { interactionId, salespersonId, flags, flagRoleplays = [] } = params;
 	let savedCount = 0;
 
+	// Flags require a salesperson - skip if not available
+	if (salespersonId === null) {
+		return { savedCount: 0 };
+	}
+
 	for (const flag of flags) {
 		const matchingRoleplay = flagRoleplays.find((rp: any) => rp.flagTitle === flag.flag_title);
 		await db.insert(schema.flags).values({
@@ -177,19 +186,19 @@ export async function persistFlags(params: {
 			complete: false,
 			agentPrompt: matchingRoleplay
 				? {
-					systemPrompt: matchingRoleplay.systemPrompt,
-					firstMessage: matchingRoleplay.firstMessage,
-					voiceId: matchingRoleplay.voiceId,
-					model: matchingRoleplay.model,
-					metadata: {
-						prospect: matchingRoleplay.metadata,
-						flagMoment: {
-							issueType: flag.flag_title,
-							whatCustomerSaid: flag.prospect_said ?? "",
-							whatWentWrong: flag.revenue_impact,
+						systemPrompt: matchingRoleplay.systemPrompt,
+						firstMessage: matchingRoleplay.firstMessage,
+						voiceId: matchingRoleplay.voiceId,
+						model: matchingRoleplay.model,
+						metadata: {
+							prospect: matchingRoleplay.metadata,
+							flagMoment: {
+								issueType: flag.flag_title,
+								whatCustomerSaid: flag.prospect_said ?? "",
+								whatWentWrong: flag.revenue_impact,
+							},
 						},
-					},
-				}
+					}
 				: null,
 		});
 		savedCount += 1;
@@ -220,23 +229,7 @@ export async function persistPersona(params: { interactionId: number; companyId:
 		prospectIndustry: p.industry ?? null,
 		coreIdentity: p.core_identity ?? null,
 		processingStyle: p.how_they_process_information ?? null,
-		decisionStyle: p.how_they_make_decisions ?? null,
-		communicationPreferences: p.communication_preferences ?? null,
-		socialStyle: p.social_style ?? null,
-		emotionalDrivers: p.emotional_drivers ?? null,
-		confidenceLevel: p.confidence_level ?? null,
-		trustTriggers: p.trust_triggers ?? null,
-		skepticismTriggers: p.skepticism_triggers ?? null,
-		primaryMotivations: p.primary_motivations ?? null,
-		fearOfLoss: p.fear_of_loss ?? null,
-		statusOrientation: p.status_orientation ?? null,
-		changeTolerance: p.change_tolerance ?? null,
-		relationshipToRisk: p.relationship_to_risk ?? null,
-		valueSignals: p.value_signals ?? null,
-		whatTheyCareAboutMost: p.what_they_care_about_most ?? null,
-		whatTheyNeedToHear: p.what_they_need_to_hear ?? null,
-		theirMainObjectionStyle: p.their_main_objection_style ?? null,
-		theirPreferredSalesApproach: p.their_preferred_sales_approach ?? null,
+		communicationStyle: p.communication_preferences ?? null,
 	});
 	return { saved: true };
 }

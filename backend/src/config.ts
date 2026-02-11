@@ -61,8 +61,8 @@ export const FILE_LIMITS = {
 	/** Maximum video file size (2GB) */
 	MAX_VIDEO_SIZE_BYTES: 2 * 1024 * 1024 * 1024,
 
-	/** Maximum audio file size (100MB) */
-	MAX_AUDIO_SIZE_BYTES: 100 * 1024 * 1024,
+	/** Maximum audio file size (2GB) */
+	MAX_AUDIO_SIZE_BYTES: 2 * 1024 * 1024 * 1024,
 } as const;
 
 // =============================================================================
@@ -76,6 +76,7 @@ export const AI = {
 	/** Max tokens for different operations */
 	MAX_TOKENS: {
 		DEFAULT: 8192,
+		FLAGGING: 16384, // Increased for detailed enterprise coaching flags
 		CALIBRATION: 4096,
 		BATTLE_CARD: 1024,
 		BATTLE_CARD_GENERATION: 2048,

@@ -1,5 +1,6 @@
 import type { AuthVariable } from "#/lib/types";
 import { Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import { zValidator } from "@hono/zod-validator";
 import z from "zod";
 import { defaultFileUploadService } from "#/services/FileUploadService";
@@ -8,10 +9,11 @@ import * as schema from "#/data/schema";
 import { eq } from "drizzle-orm";
 import { checkInteractionAccess, requireFileAccess, getSalespersonForUserWithAdminFallback } from "#/middleware/authorization";
 import { logger } from "#/lib/logger";
-import { writeFile, mkdir } from "node:fs/promises";
-import { join, dirname } from "node:path";
+import { writeFile, mkdir, stat, readdir, unlink, appendFile } from "node:fs/promises";
+import { join, dirname, isAbsolute } from "node:path";
 import { randomUUID } from "node:crypto";
-import { existsSync } from "node:fs";
+import { existsSync, createReadStream, createWriteStream } from "node:fs";
+import { Readable } from "node:stream";
 import { getTenantPrefixedPath } from "#/lib/tenant";
 import { fileURLToPath } from "node:url";
 import { idParamSchema } from "#/lib/validation";
@@ -31,6 +33,37 @@ function getUploadsDir() {
 	}
 	// Fall back to process.cwd() for backwards compatibility
 	return join(process.cwd(), "uploads");
+}
+
+function getChunksDir() {
+	return join(getUploadsDir(), "chunks");
+}
+
+// Track active chunk uploads in memory
+const activeUploads = new Map<string, { chunks: Set<number>; totalChunks: number; fileName: string; mimeType: string; fileSize: number; interactionId?: number }>();
+
+async function combineChunks(uploadId: string, totalChunks: number, outputPath: string): Promise<void> {
+	const chunksDir = getChunksDir();
+	const writeStream = createWriteStream(outputPath);
+
+	for (let i = 0; i < totalChunks; i++) {
+		const chunkPath = join(chunksDir, `${uploadId}_${i}`);
+		const chunkData = createReadStream(chunkPath);
+
+		await new Promise<void>((resolve, reject) => {
+			chunkData.pipe(writeStream, { end: false });
+			chunkData.on("end", resolve);
+			chunkData.on("error", reject);
+		});
+	}
+
+	writeStream.end();
+
+	// Clean up chunk files
+	for (let i = 0; i < totalChunks; i++) {
+		const chunkPath = join(chunksDir, `${uploadId}_${i}`);
+		await unlink(chunkPath).catch(() => {});
+	}
 }
 
 // Validation schemas
@@ -55,6 +88,133 @@ const app = new Hono<AuthVariable<false>>()
 		}
 		return next();
 	})
+	// Chunked upload endpoint - handles 20MB chunks sequentially
+	.use("/chunk", bodyLimit({ maxSize: 25 * 1024 * 1024 })) // 25MB limit per chunk
+	.post("/chunk", async (c) => {
+		try {
+			const currentUser = c.get("user");
+			if (!currentUser) {
+				return c.json({ error: "Unauthorized" }, 401);
+			}
+
+			const body = await c.req.parseBody();
+			const chunk = body.chunk as File;
+			const uploadId = body.uploadId as string;
+			const chunkIndex = Number(body.chunkIndex);
+			const totalChunks = Number(body.totalChunks);
+			const fileName = body.fileName as string;
+			const fileSize = Number(body.fileSize);
+			const mimeType = body.mimeType as string;
+			const interactionId = body.interactionId ? Number(body.interactionId) : undefined;
+
+			if (!chunk || !uploadId || isNaN(chunkIndex) || isNaN(totalChunks) || !fileName) {
+				return c.json({ error: "Missing required fields" }, 400);
+			}
+
+			// Create chunks directory if needed
+			const chunksDir = getChunksDir();
+			if (!existsSync(chunksDir)) {
+				await mkdir(chunksDir, { recursive: true });
+			}
+
+			// Save the chunk
+			const chunkPath = join(chunksDir, `${uploadId}_${chunkIndex}`);
+			const arrayBuffer = await chunk.arrayBuffer();
+			await writeFile(chunkPath, Buffer.from(arrayBuffer));
+
+			// Track this upload
+			if (!activeUploads.has(uploadId)) {
+				activeUploads.set(uploadId, {
+					chunks: new Set(),
+					totalChunks,
+					fileName,
+					mimeType,
+					fileSize,
+					interactionId,
+				});
+			}
+
+			const upload = activeUploads.get(uploadId)!;
+			upload.chunks.add(chunkIndex);
+
+			logger.info({ uploadId, chunkIndex, totalChunks, receivedChunks: upload.chunks.size }, "Chunk received");
+
+			// Check if all chunks are received
+			if (upload.chunks.size === totalChunks) {
+				// Combine chunks into final file
+				const uploadsBase = getUploadsDir();
+				const fileExtension = fileName.includes(".") ? fileName.substring(fileName.lastIndexOf(".")) : ".bin";
+				const uniqueFileName = `${randomUUID()}${fileExtension}`;
+				const baseFilePath = `uploads/${new Date().getFullYear()}/${(new Date().getMonth() + 1).toString().padStart(2, "0")}/${uniqueFileName}`;
+				const filePath = getTenantPrefixedPath(baseFilePath);
+
+				const uploadDir = join(uploadsBase, filePath.split("/").slice(0, -1).join("/"));
+				if (!existsSync(uploadDir)) {
+					await mkdir(uploadDir, { recursive: true });
+				}
+
+				const fullPath = join(uploadsBase, filePath);
+				await combineChunks(uploadId, totalChunks, fullPath);
+
+				// Create interaction if needed
+				let finalInteractionId = interactionId;
+				if (!finalInteractionId) {
+					const salespersonResult = await getSalespersonForUserWithAdminFallback(currentUser.id);
+					if (!salespersonResult) {
+						return c.json({ error: "No salesperson found for user" }, 400);
+					}
+
+					const [newInteraction] = await db
+						.insert(schema.interactions)
+						.values({
+							salespersonId: salespersonResult.salesperson.id,
+							processedStatus: "unprocessed",
+							blurb: `Call uploaded: ${fileName}`,
+						})
+						.returning();
+
+					finalInteractionId = newInteraction.id;
+				}
+
+				// Store file record
+				const fileRecord = await db
+					.insert(schema.bigfiles)
+					.values({
+						fileName,
+						filePath,
+						fileSize,
+						mimeType,
+						interactionId: finalInteractionId,
+					})
+					.returning();
+
+				// Clean up tracking
+				activeUploads.delete(uploadId);
+
+				logger.info({ uploadId, filePath, fileSize, interactionId: finalInteractionId }, "Chunked upload complete");
+
+				return c.json({
+					success: true,
+					complete: true,
+					fileId: fileRecord[0].id,
+					interactionId: finalInteractionId,
+					filePath,
+				});
+			}
+
+			return c.json({
+				success: true,
+				complete: false,
+				chunksReceived: upload.chunks.size,
+				totalChunks,
+			});
+		} catch (error) {
+			logger.error({ error }, "Error processing chunk upload");
+			return c.json({ error: "Failed to process chunk" }, 500);
+		}
+	})
+	// Allow 2GB file uploads
+	.use("/local", bodyLimit({ maxSize: FILE_LIMITS.MAX_VIDEO_SIZE_BYTES }))
 	.post("/local", async (c) => {
 		try {
 			const currentUser = c.get("user");
@@ -75,8 +235,8 @@ const app = new Hono<AuthVariable<false>>()
 			const isVideo = file.type?.startsWith("video/") || file.name.match(/\.(mp4|mov|avi|mkv|webm)$/i);
 			const maxSize = isVideo ? FILE_LIMITS.MAX_VIDEO_SIZE_BYTES : FILE_LIMITS.MAX_AUDIO_SIZE_BYTES;
 			if (file.size > maxSize) {
-				const maxSizeMB = Math.floor(maxSize / (1024 * 1024));
-				return c.json({ error: `File size must be less than ${maxSizeMB}MB` }, 400);
+				const maxSizeGB = maxSize / (1024 * 1024 * 1024);
+				return c.json({ error: `File size must be less than ${maxSizeGB}GB` }, 400);
 			}
 
 			// Validate interaction access
@@ -93,8 +253,31 @@ const app = new Hono<AuthVariable<false>>()
 				}
 			}
 
-			// Generate unique file path
-			const fileExtension = file.name.substring(file.name.lastIndexOf("."));
+			// Generate unique file path - handle missing extension from Windows browsers
+			let fileExtension = "";
+			const lastDotIndex = file.name.lastIndexOf(".");
+			if (lastDotIndex > 0) {
+				fileExtension = file.name.substring(lastDotIndex);
+			} else {
+				// Fall back to extension from MIME type if filename has no extension
+				const mimeToExt: Record<string, string> = {
+					"audio/mpeg": ".mp3",
+					"audio/mp3": ".mp3",
+					"audio/wav": ".wav",
+					"audio/wave": ".wav",
+					"audio/x-wav": ".wav",
+					"audio/m4a": ".m4a",
+					"audio/x-m4a": ".m4a",
+					"audio/aac": ".aac",
+					"video/mp4": ".mp4",
+					"video/quicktime": ".mov",
+					"video/x-msvideo": ".avi",
+					"video/x-matroska": ".mkv",
+					"video/webm": ".webm",
+				};
+				fileExtension = mimeToExt[file.type] ?? ".bin";
+				logger.warn({ fileName: file.name, mimeType: file.type, inferredExtension: fileExtension }, "No file extension found, inferring from MIME type");
+			}
 			const uniqueFileName = `${randomUUID()}${fileExtension}`;
 			const baseFilePath = `uploads/${new Date().getFullYear()}/${(new Date().getMonth() + 1).toString().padStart(2, "0")}/${uniqueFileName}`;
 			const filePath = getTenantPrefixedPath(baseFilePath);
@@ -264,21 +447,16 @@ const app = new Hono<AuthVariable<false>>()
 				return c.json({ error: "File not found" }, 404);
 			}
 
-			// In development, check if file exists locally first
-			if (process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test") {
-				const uploadsDir = getUploadsDir();
-				const localPath = join(uploadsDir, file[0].filePath);
-				const fileExists = existsSync(localPath);
-				logger.info({ uploadsDir, filePath: file[0].filePath, localPath, fileExists }, "Checking for local file");
-				if (fileExists) {
-					// Return local download URL
-					return c.json({
-						downloadUrl: `/vantage/api/upload/local-file/${fileId}`,
-						fileName: file[0].fileName,
-						mimeType: file[0].mimeType,
-						fileSize: file[0].fileSize,
-					});
-				}
+			// Check if file exists locally first (uploads via /local endpoint), fall back to GCS
+			const uploadsDir = getUploadsDir();
+			const localPath = isAbsolute(file[0].filePath) ? file[0].filePath : join(uploadsDir, file[0].filePath);
+			if (existsSync(localPath)) {
+				return c.json({
+					downloadUrl: `/vantage/api/upload/local-file/${fileId}`,
+					fileName: file[0].fileName,
+					mimeType: file[0].mimeType,
+					fileSize: file[0].fileSize,
+				});
 			}
 
 			// Generate presigned download URL for GCS
@@ -305,26 +483,47 @@ const app = new Hono<AuthVariable<false>>()
 				return c.json({ error: "File not found" }, 404);
 			}
 
-			// Serve local file
-			const localPath = join(getUploadsDir(), file[0].filePath);
+			const localPath = isAbsolute(file[0].filePath) ? file[0].filePath : join(getUploadsDir(), file[0].filePath);
 			if (!existsSync(localPath)) {
 				return c.json({ error: "File not found on disk" }, 404);
 			}
 
-			const { readFile } = await import("node:fs/promises");
-			const fileBuffer = await readFile(localPath);
-
+			const fileStat = await stat(localPath);
+			const fileSize = fileStat.size;
 			const mimeType = file[0].mimeType ?? "application/octet-stream";
 			const isMediaFile = mimeType.startsWith("audio/") || mimeType.startsWith("video/");
 
+			// Handle Range requests for video/audio seeking
+			const rangeHeader = c.req.header("Range");
+			if (rangeHeader && isMediaFile) {
+				const match = /bytes=(\d*)-(\d*)/.exec(rangeHeader);
+				if (match) {
+					const start = match[1] ? Number.parseInt(match[1]) : 0;
+					const end = match[2] ? Number.parseInt(match[2]) : fileSize - 1;
+					const chunkSize = end - start + 1;
+
+					const nodeStream = createReadStream(localPath, { start, end });
+					const webStream = Readable.toWeb(nodeStream) as ReadableStream;
+
+					c.header("Content-Type", mimeType);
+					c.header("Content-Range", `bytes ${start}-${end}/${fileSize}`);
+					c.header("Content-Length", chunkSize.toString());
+					c.header("Accept-Ranges", "bytes");
+
+					return c.body(webStream, { status: 206 });
+				}
+			}
+
+			// Full file stream
+			const nodeStream = createReadStream(localPath);
+			const webStream = Readable.toWeb(nodeStream) as ReadableStream;
+
 			c.header("Content-Type", mimeType);
-			// Use inline for media files to allow streaming/playback, attachment for downloads
 			c.header("Content-Disposition", `${isMediaFile ? "inline" : "attachment"}; filename="${file[0].fileName}"`);
-			c.header("Content-Length", file[0].fileSize?.toString() ?? fileBuffer.length.toString());
-			// Enable range requests for media seeking
+			c.header("Content-Length", fileSize.toString());
 			c.header("Accept-Ranges", "bytes");
 
-			return c.body(fileBuffer);
+			return c.body(webStream);
 		} catch (error) {
 			logger.error({ error }, "Error serving local file");
 			return c.json({ error: "Failed to serve file" }, 500);

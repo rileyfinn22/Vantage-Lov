@@ -76,6 +76,11 @@ export const feedbackEventTypes = pgEnum("feedback_event_types", [
 	"objection_response", // Feedback on objection handling
 ]);
 
+// CRM integration enums
+export const crmProvider = pgEnum("crm_provider", ["hubspot", "zoho", "agilecrm"]);
+
+export const crmConnectionStatus = pgEnum("crm_connection_status", ["connected", "disconnected", "error", "expired"]);
+
 // Central table for ALL human feedback that AI should learn from
 export const feedbackEvents = pgTable(
 	"feedback_events",
@@ -1285,4 +1290,97 @@ export const workflowQueue = pgTable(
 			unique: true,
 		},
 	],
+);
+
+// =============================================================================
+// MEETING PREP TABLES
+// =============================================================================
+// Tables for AI-powered meeting preparation feature
+// Allows sales reps to prepare for upcoming meetings with AI-generated guides,
+// chat support, and voice roleplay practice.
+
+export const meetingPrepStatus = pgEnum("meeting_prep_status", ["setup", "ready", "practiced"]);
+export const meetingPrepCallType = pgEnum("meeting_prep_call_type", ["discovery", "demo", "negotiation", "closing", "follow_up"]);
+
+export const meetingPreps = pgTable(
+	"meeting_preps",
+	{
+		id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+		salespersonId: integer("salesperson_id")
+			.notNull()
+			.references(() => salespeople.id, { onDelete: "cascade" }),
+		companyId: integer("company_id")
+			.notNull()
+			.references(() => companies.id, { onDelete: "cascade" }),
+
+		// Prospect info
+		prospectCompany: text("prospect_company").notNull(),
+		prospectContactName: text("prospect_contact_name"),
+		prospectContactRole: text("prospect_contact_role"),
+		prospectIndustry: text("prospect_industry"),
+		prospectCompanySize: text("prospect_company_size"),
+		prospectWebsite: text("prospect_website"),
+
+		// Meeting context
+		callType: meetingPrepCallType("call_type").notNull(),
+		meetingGoal: text("meeting_goal").notNull(),
+		knownPainPoints: jsonb("known_pain_points").$type<string[]>(),
+		previousInteractions: text("previous_interactions"),
+		notes: text("notes"),
+
+		// AI-generated content
+		prepGuide: text("prep_guide"), // Generated prep guide markdown
+		chatHistory: jsonb("chat_history").$type<Array<{ role: "user" | "assistant"; content: string; timestamp: string }>>(),
+
+		// ElevenLabs roleplay agent
+		agentId: text("agent_id"),
+		agentPrompt: jsonb("agent_prompt").$type<{
+			systemPrompt: string;
+			firstMessage: string;
+			voiceId?: string;
+		}>(),
+
+		// Status
+		status: meetingPrepStatus("status").notNull().default("setup"),
+
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		updatedAt: timestamp("updated_at").defaultNow().notNull(),
+	},
+	(_t) => [],
+);
+
+// CRM Integration - Store OAuth connections to external CRMs
+export const crmConnections = pgTable(
+	"crm_connections",
+	{
+		id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+		companyId: integer("company_id")
+			.notNull()
+			.references(() => companies.id, { onDelete: "cascade" }),
+		provider: crmProvider("provider").notNull(),
+
+		// OAuth tokens
+		accessToken: text("access_token").notNull(),
+		refreshToken: text("refresh_token"),
+		tokenExpiresAt: timestamp("token_expires_at"),
+
+		// Provider account info
+		providerAccountId: text("provider_account_id"),
+		providerAccountName: text("provider_account_name"),
+		connectedUserEmail: text("connected_user_email"),
+
+		// Sync status
+		status: crmConnectionStatus("status").notNull().default("connected"),
+		lastSyncAt: timestamp("last_sync_at"),
+		syncError: text("sync_error"),
+
+		// Stats
+		contactsCount: integer("contacts_count").default(0),
+		companiesCount: integer("companies_count").default(0),
+		dealsCount: integer("deals_count").default(0),
+
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		updatedAt: timestamp("updated_at").defaultNow().notNull(),
+	},
+	(_t) => [],
 );

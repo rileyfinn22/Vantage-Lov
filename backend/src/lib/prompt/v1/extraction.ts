@@ -8,23 +8,100 @@
  * 2. battle_cards - Generated battle cards from identified patterns
  */
 export function extractionPrompt() {
-	return `You are analyzing a sales call transcript to extract objections, pain points, AND generate tactical battle cards.
+	return `You are analyzing a sales call transcript for an enterprise Sales & Revenue Technology deal. The rep is selling sales/revenue tech (CRM, sales enablement, revenue intelligence, conversation intelligence, forecasting) to a Sales Leader (VP Sales, CRO, Director, RevOps).
+
+## THE CONTEXT: SELLING SALES TECH TO SALES PROFESSIONALS
+
+These calls have unique dynamics:
+- Buyers are sophisticated sales professionals who know every tactic
+- They evaluate reps as a proxy for product quality
+- They speak in revenue metrics (quota, attainment, pipeline, win rate)
+- They're skeptical from seeing dozens of tools that didn't deliver
+- They expect peer-level conversation, not vendor pitches
 
 ## PART 1: EXTRACTION
 
-### DEFINITIONS
+### SALES TECH OBJECTION CATEGORIES
 
-**OBJECTION**: A specific reason the prospect gives for NOT moving forward.
-- Must be a stated barrier, not just a concern or question
-- Examples: "We don't have budget for this", "We're locked into a 2-year contract"
+**TECH STACK & INTEGRATION**
+- Current tool overlap ("We already use Gong/Clari/Outreach")
+- CRM integration concerns (Salesforce, HubSpot, Dynamics)
+- API limitations, data sync issues
+- RevOps bandwidth for implementation
+- Examples: "How does this work with our Salesforce instance?", "We're already using [Competitor]"
 
-**PAIN POINT (Prospect)**: A challenge or problem the prospect is experiencing.
-- Something causing them difficulty that your product could solve
-- Examples: "Our team wastes 5 hours a week on manual reports"
+**ADOPTION & CHANGE MANAGEMENT**
+- Rep adoption skepticism ("My team won't use another tool")
+- Previous failed rollouts creating hesitation
+- Training burden on managers
+- Workflow disruption concerns
+- Examples: "We've tried tools like this", "Getting reps to log anything is impossible"
 
-**PAIN POINT (Rep)**: A weakness or skill gap the salesperson exhibits.
-- Poor technique, missed opportunity
-- Examples: "Rep talked over the prospect multiple times"
+**ROI & BUDGET JUSTIFICATION**
+- CFO/board approval requirements
+- Per-seat cost at enterprise scale
+- Proving ROI with hard metrics
+- Multi-year commitment hesitation
+- Examples: "I need to show the board clear ROI", "That's $X per rep?"
+
+**TIMING & PRIORITY**
+- Quarter-end focus, can't distract team
+- Competing initiatives (new CRM, reorg, comp plan changes)
+- Budget cycle timing
+- SKO or implementation windows
+- Examples: "We're mid-quarter", "We're rolling out a new comp plan"
+
+**PROOF & VALIDATION**
+- Reference requests from similar companies
+- Pilot/POC requirements
+- Skepticism about claimed results
+- Need to see it with their data
+- Examples: "Can you connect me with a VP Sales at a similar company?"
+
+**AUTHORITY & PROCESS**
+- CRO/CEO sign-off needed
+- Procurement/security review required
+- Multiple stakeholder involvement
+- Examples: "I need to bring this to my CRO"
+
+**COMPETITION & STATUS QUO**
+- Incumbent vendor relationship
+- "Good enough" syndrome
+- Build vs. buy consideration
+- Examples: "Our current tool works fine", "We're also looking at [Competitor]"
+
+### SALES LEADER PAIN POINT CATEGORIES
+
+**PIPELINE & FORECASTING**
+- Forecast accuracy issues, commit confidence
+- Pipeline coverage gaps, deal slippage
+- Visibility into deal health and risk
+
+**REP PERFORMANCE & PRODUCTIVITY**
+- Inconsistent rep performance, skill gaps
+- Ramp time for new hires too long
+- Low quota attainment
+- Too much time on non-selling activities
+
+**COACHING & ENABLEMENT**
+- Manager coaching time constraints
+- No visibility into what happens on calls
+- Inconsistent methodology adherence
+- No way to scale best practices
+
+**REVENUE OPERATIONS**
+- Data quality and hygiene issues
+- Manual reporting burden
+- Disconnected tools
+- Lack of actionable insights
+
+### REP SKILL ASSESSMENT
+
+**PAIN POINT (Rep)**: A weakness or skill gap when selling to sales leaders.
+- Not speaking their language (quota, attainment, pipeline)
+- Generic SaaS selling instead of peer-level conversation
+- Feature dumping instead of outcome selling
+- Missing relevant sales tech context
 
 ### EXTRACTION REQUIREMENTS
 

@@ -71,12 +71,10 @@ export const FlagResponse = z.object({
 		start: z.string().optional(),
 		end: z.string().optional(),
 	}),
-	scratchpad: z.string().optional(),
 });
 
 export const FlaggingResponse = z.object({
 	flags: z.array(FlagResponse),
-	scratchpad: z.string().optional(),
 });
 
 export type CachedAnalysisConfig = {
@@ -98,10 +96,12 @@ export class CachedAnalysisService {
 		userPrompt: string,
 		interactionId?: string,
 		modelOverride?: string,
+		maxTokensOverride?: number,
 	): Promise<string> {
 		const response = await this.client.messages.create({
 			model: modelOverride ?? this.model,
-			max_tokens: AI.MAX_TOKENS.DEFAULT,
+			max_tokens: maxTokensOverride ?? AI.MAX_TOKENS.DEFAULT,
+			temperature: 0.1, // Low temperature for consistent, deterministic scoring
 			system: [cachedSystem],
 			messages: [
 				{
@@ -123,6 +123,7 @@ export class CachedAnalysisService {
 			{
 				interactionId,
 				model: modelOverride ?? this.model,
+				stopReason: response.stop_reason,
 				inputTokens: usage.input_tokens,
 				outputTokens: usage.output_tokens,
 				cacheCreationTokens: usage.cache_creation_input_tokens ?? 0,
@@ -130,6 +131,13 @@ export class CachedAnalysisService {
 			},
 			"API call completed",
 		);
+
+		if (response.stop_reason === "max_tokens") {
+			logger.warn(
+				{ interactionId, outputTokens: usage.output_tokens, maxTokens: maxTokensOverride ?? AI.MAX_TOKENS.DEFAULT },
+				"Response hit max_tokens — output is truncated and JSON will likely fail to parse",
+			);
+		}
 
 		// Extract text from response
 		const textBlock = response.content.find((block) => block.type === "text");
@@ -198,27 +206,27 @@ IMPORTANT: Respond with ONLY valid JSON matching this structure:
 
 ${prompt}
 
-IMPORTANT: Respond with ONLY valid JSON matching this structure:
+IMPORTANT: Respond with ONLY valid JSON. Be concise — every text field should be 1-2 sentences max. Do NOT include a scratchpad or any reasoning outside the flags array.
+
 {
   "flags": [
     {
       "revision": "v1",
       "flag_title": "<string>",
       "confidenceOutOf100": <number>,
-      "validation_checklist": ["<string>", ...],
-      "what_happened": "<string>",
-      "prospect_said": "<2-4 sentences capturing what the prospect said in this moment - enough to understand the full context>",
-      "rep_said": "<2-4 sentences capturing what the rep said in response - enough to understand the full context>",
-      "revenue_impact": "<string>",
+      "validation_checklist": ["<short phrase>", ...],
+      "what_happened": "<1-2 sentences>",
+      "prospect_said": "<1-2 sentences of the key prospect quote>",
+      "rep_said": "<1-2 sentences of what the rep said>",
+      "revenue_impact": "<1 sentence>",
       "better_response": ["<response1>", "<response2>"],
-      "benchmarking_context": "<string>",
-      "pattern_analysis": "<string>",
-      "role_expectation": "<string>",
-      "why_this_matters": "<string>",
-      "timestamps": { "start": "<string>", "end": "<string>" }
+      "benchmarking_context": "<1 sentence>",
+      "pattern_analysis": "<1 sentence or null>",
+      "role_expectation": "<1 sentence>",
+      "why_this_matters": "<1 sentence>",
+      "timestamps": { "start": "<HH:MM:SS>", "end": "<HH:MM:SS>" }
     }
-  ],
-  "scratchpad": "<your internal reasoning>"
+  ]
 }`;
 	}
 
@@ -311,11 +319,29 @@ You will receive specific analysis instructions in the user message. Respond wit
 		logger.info({ interactionId }, "Starting parallel analysis (flagging, extraction) - cache hits");
 
 		const [flaggingResult, extractionResult] = await Promise.allSettled([
-			// Flagging
+			// Flagging - use higher token limit for detailed enterprise coaching
 			(async () => {
-				const result = await this.runAnalysis(cachedSystemContent, this.buildFlaggingPrompt(prompts.flagging, undefined), interactionId);
-				const parsed = JSON.parse(result);
-				return FlaggingResponse.parse(parsed);
+				const result = await this.runAnalysis(
+					cachedSystemContent,
+					this.buildFlaggingPrompt(prompts.flagging, undefined),
+					interactionId,
+					undefined, // no model override
+					AI.MAX_TOKENS.FLAGGING, // use higher token limit for detailed flags
+				);
+
+				// DEBUG: Log raw flagging response
+				logger.info({ interactionId, rawResponseLength: result.length }, "Raw flagging response received");
+				console.log("\n=== RAW FLAGGING RESPONSE ===\n", result.substring(0, 2000), "\n=== END PREVIEW ===\n");
+
+				try {
+					const parsed = JSON.parse(result);
+					console.log("\n=== PARSED FLAGS COUNT ===", parsed.flags?.length ?? 0);
+					return FlaggingResponse.parse(parsed);
+				} catch (parseError) {
+					console.error("\n=== JSON PARSE ERROR ===\n", parseError);
+					console.log("\n=== FULL RAW RESPONSE ===\n", result);
+					throw parseError;
+				}
 			})(),
 
 			// Extraction (objections, pain points)

@@ -3,7 +3,7 @@ import { useDelete } from '@refinedev/core';
 import { addNotification } from '#/routes/dashboard/layout/Notifications';
 import type { FileUploadProps } from '../types';
 import { Paperclip } from 'lucide-react';
-import { ho } from '#/data/client';
+import { uploadFileInChunks } from '#/util/chunkedUpload';
 
 const FileUpload = ({ interactionId, onUploadComplete, className = '', existingFiles }: FileUploadProps) => {
     const [isUploading, setIsUploading] = useState(false);
@@ -15,9 +15,9 @@ const FileUpload = ({ interactionId, onUploadComplete, className = '', existingF
         if (!files || files.length === 0) return;
 
         const file = files[0];
-        if (file.size > 100 * 1024 * 1024) {
-            // 100MB limit
-            addNotification('File size must be less than 100MB', 'error');
+        if (file.size > 2 * 1024 * 1024 * 1024) {
+            // 2GB limit
+            addNotification('File size must be less than 2GB', 'error');
             return;
         }
 
@@ -53,33 +53,21 @@ const FileUpload = ({ interactionId, onUploadComplete, className = '', existingF
                 }
             }
 
-            try {
-                // Use local upload endpoint in development
-                const formData = new FormData();
-                formData.append('file', file);
-                if (interactionId) {
-                    formData.append('interactionId', interactionId.toString());
-                }
+            // Use chunked upload for reliable large file uploads
+            const result = await uploadFileInChunks(
+                file,
+                (progress) => {
+                    setUploadProgress(progress.percentage);
+                },
+                interactionId
+            );
 
-                setUploadProgress(30);
-
-                // Use regular fetch for file upload (Hono client doesn't handle FormData well)
-                const uploadResponse = await fetch('/vantage/api/upload/local', {
-                    method: 'POST',
-                    body: formData,
-                    credentials: 'include',
-                });
-
-                if (!uploadResponse.ok) {
-                    throw new Error('Failed to upload file');
-                }
-
+            if (result.success) {
                 setUploadProgress(100);
                 addNotification('File uploaded successfully', 'success');
                 onUploadComplete();
-            } catch (error) {
-                console.error('Upload error:', error);
-                addNotification(`Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+            } else {
+                throw new Error(result.error ?? 'Upload failed');
             }
         } catch (error) {
             console.error('File replacement error:', error);

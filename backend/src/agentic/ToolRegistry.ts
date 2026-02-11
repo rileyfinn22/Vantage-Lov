@@ -20,6 +20,10 @@ export class ToolRegistry {
 		return this.tools.has(name);
 	}
 
+	getToolNames(): string[] {
+		return Array.from(this.tools.keys());
+	}
+
 	async execute(name: string, args: unknown, ctx: ToolContext): Promise<{ result: JsonValue; events: AgenticTraceEvent[] }> {
 		const tool = this.tools.get(name);
 		if (!tool) {

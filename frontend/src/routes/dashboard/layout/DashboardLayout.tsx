@@ -12,6 +12,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     const { userData } = useMe();
 
     const companyName = userData?.roles?.companyRoles?.[0]?.companyName ?? 'Unknown Company';
+    // User is admin if they have site admin role OR company admin role
+    const isSiteAdmin = userData?.roles?.siteRoles?.includes('admin') ?? false;
+    const isCompanyAdmin = userData?.roles?.companyRoles?.some((role) => role.role === 'admin') ?? false;
+    const isAdmin = isSiteAdmin || isCompanyAdmin;
 
     return (
         <div className="drawer lg:drawer-open">
@@ -33,7 +37,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
             <div className="drawer-side">
                 <label htmlFor="main-drawer" aria-label="Close drawer" className="drawer-overlay"></label>
-                <Sidebar userRole="manager" isAdmin={true} />
+                <Sidebar userRole="manager" isAdmin={isAdmin} />
             </div>
         </div>
     );

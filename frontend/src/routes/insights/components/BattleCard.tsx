@@ -2,6 +2,7 @@ import { Copy, PlayCircle } from 'lucide-react';
 import type { BattleCard as BattleCardType } from '#data/battle-cards';
 import { useState } from 'react';
 import { useLocation } from 'wouter';
+import { useMySalesData } from '#util/useMe';
 
 interface BattleCardProps {
     battleCard: BattleCardType;
@@ -12,6 +13,7 @@ interface BattleCardProps {
 export function BattleCard({ battleCard, showPracticeButton = true, scenarioId }: BattleCardProps) {
     const [, navigate] = useLocation();
     const [copied, setCopied] = useState(false);
+    const { data: salesData } = useMySalesData();
 
     const getPhaseColor = (phase: string) => {
         switch (phase) {
@@ -39,10 +41,8 @@ export function BattleCard({ battleCard, showPracticeButton = true, scenarioId }
     };
 
     const handlePractice = () => {
-        if (scenarioId) {
-            // Navigate to training session with the scenario
-            // TODO: Replace with actual salesperson ID from context
-            navigate(`/salesperson/1/training/${scenarioId}`);
+        if (scenarioId && salesData?.salesperson?.id) {
+            navigate(`/salesperson/${salesData.salesperson.id}/training/${scenarioId}`);
         }
     };
 

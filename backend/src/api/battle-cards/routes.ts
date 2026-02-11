@@ -232,6 +232,66 @@ const app = new Hono<AuthVariable<false>>()
 		return c.json(archived);
 	})
 
+	// Backfill training scenarios for all battle cards that don't have them
+	.post("/backfill-scenarios", requireAuth, async (c) => {
+		const currentUser = c.get("user");
+		const companyId = await getUserCompanyId(currentUser.id);
+
+		if (!companyId) {
+			return c.json({ error: "User not associated with a company" }, 400);
+		}
+
+		// Find all battle cards without linked scenarios for this company
+		const battleCardsWithoutScenarios = await db
+			.select()
+			.from(schema.battleCards)
+			.where(and(eq(schema.battleCards.companyId, companyId), eq(schema.battleCards.isActive, true)))
+			.orderBy(desc(schema.battleCards.impactScore));
+
+		const results: { battleCardId: number; scenarioId: number; title: string }[] = [];
+		const errors: { battleCardId: number; title: string; error: string }[] = [];
+
+		for (const battleCard of battleCardsWithoutScenarios) {
+			// Skip if already has a scenario
+			if (battleCard.linkedScenarioId) {
+				continue;
+			}
+
+			try {
+				const battleCardContent = {
+					title: battleCard.title,
+					challenge: battleCard.challenge,
+					phase: battleCard.phase as "outreach" | "discovery" | "demo" | "close",
+					strategy: battleCard.strategy,
+					approach: battleCard.approach as string[],
+					script: battleCard.script,
+					nextStep: battleCard.nextStep,
+				};
+
+				const sourceType = (battleCard.sourceType as "objection" | "pain_point") ?? "objection";
+				const scenarioContent = await generateTrainingScenario(battleCardContent, sourceType);
+				const skillKey = sourceType === "objection" ? "objection_handling" : "general_sales";
+				const scenarioId = await saveTrainingScenario(battleCard.id, scenarioContent, skillKey);
+
+				results.push({ battleCardId: battleCard.id, scenarioId, title: battleCard.title });
+			} catch (error) {
+				errors.push({
+					battleCardId: battleCard.id,
+					title: battleCard.title,
+					error: error instanceof Error ? error.message : "Unknown error",
+				});
+			}
+		}
+
+		return c.json({
+			message: `Generated ${results.length} training scenarios`,
+			generated: results,
+			errors: errors.length > 0 ? errors : undefined,
+			totalBattleCards: battleCardsWithoutScenarios.length,
+			alreadyHadScenarios: battleCardsWithoutScenarios.length - results.length - errors.length,
+		});
+	})
+
 	// Start training for a battle card (creates/returns the linked scenario)
 	.post("/:id/train", requireAuth, zValidator("param", idParamSchema), async (c) => {
 		const { id } = c.req.valid("param");

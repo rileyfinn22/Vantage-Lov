@@ -31,15 +31,19 @@ export async function flagDetailsData(flagId: number) {
 		interactionFlags = await db.select().from(schema.flags).where(eq(schema.flags.interactionId, flag.interactionId));
 	}
 
-	// Get audio file for the interaction if exists
+	// Get audio/video file for the interaction if exists
 	let audioFile = null;
 	if (flag.interactionId) {
-		const audioMimeTypes = ["audio/mpeg", "audio/wav", "audio/mp3", "video/mp4", "video/webm", "video/quicktime"];
-		const audioFileResult = await db.select().from(schema.bigfiles).where(eq(schema.bigfiles.interactionId, flag.interactionId));
+		const mediaMimeTypes = ["audio/mpeg", "audio/wav", "audio/mp3", "video/mp4", "video/webm", "video/quicktime"];
+		const mediaFileResult = await db.select().from(schema.bigfiles).where(eq(schema.bigfiles.interactionId, flag.interactionId));
 
-		// Filter for audio/video files and take the first one
-		const audioFiles = audioFileResult.filter((file) => file.mimeType && audioMimeTypes.includes(file.mimeType));
-		audioFile = audioFiles.length > 0 ? audioFiles[0] : null;
+		// Filter for audio/video files
+		const mediaFiles = mediaFileResult.filter((file) => file.mimeType && mediaMimeTypes.includes(file.mimeType));
+
+		// Prefer video files over extracted audio files
+		const videoFile = mediaFiles.find((file) => file.mimeType?.startsWith("video/"));
+		const audioOnlyFile = mediaFiles.find((file) => file.mimeType?.startsWith("audio/"));
+		audioFile = videoFile ?? audioOnlyFile ?? null;
 	}
 
 	// Get full salesperson details using existing function

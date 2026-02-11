@@ -1,4 +1,4 @@
-import type { ToolDefinition, ToolContext } from "#/agentic/types";
+import type { ToolDefinition, ToolContext, JsonValue } from "#/agentic/types";
 import {
 	loadInteractionContext,
 	loadAnalysisPrompts,
@@ -22,8 +22,9 @@ export function getInteractionPipelineTools(): ToolDefinition[] {
 				},
 				required: ["interactionId"],
 			},
-			handler: async (input: { interactionId: number }, _ctx: ToolContext) => {
-				return loadInteractionContext({ interactionId: input.interactionId });
+			handler: async (args: unknown, _ctx: ToolContext): Promise<JsonValue> => {
+				const input = args as { interactionId: number };
+				return loadInteractionContext({ interactionId: input.interactionId }) as Promise<JsonValue>;
 			},
 		},
 		{
@@ -31,8 +32,8 @@ export function getInteractionPipelineTools(): ToolDefinition[] {
 			description:
 				"Load the current prompt variants (rating/flagging/extraction/persona) using DB overrides with fallbacks. Side-effect free.",
 			inputSchema: { type: "object", properties: {}, required: [] },
-			handler: async (_input: Record<string, never>, _ctx: ToolContext) => {
-				return loadAnalysisPrompts();
+			handler: async (_args: unknown, _ctx: ToolContext): Promise<JsonValue> => {
+				return loadAnalysisPrompts() as Promise<JsonValue>;
 			},
 		},
 		{
@@ -58,8 +59,8 @@ export function getInteractionPipelineTools(): ToolDefinition[] {
 				},
 				required: ["interactionId", "textToAnalyze", "prompts"],
 			},
-			handler: async (
-				input: {
+			handler: async (args: unknown, _ctx: ToolContext): Promise<JsonValue> => {
+				const input = args as {
 					interactionId: number;
 					textToAnalyze: string;
 					companyContextFormatted?: string;
@@ -69,15 +70,13 @@ export function getInteractionPipelineTools(): ToolDefinition[] {
 						extractionPromptText: string;
 						personaPromptText: string;
 					};
-				},
-				_ctx: ToolContext,
-			) => {
+				};
 				return runBranchedAnalysis({
 					interactionId: input.interactionId,
 					textToAnalyze: input.textToAnalyze,
 					companyContextFormatted: input.companyContextFormatted,
 					prompts: input.prompts,
-				});
+				}) as Promise<JsonValue>;
 			},
 		},
 		{
@@ -91,7 +90,8 @@ export function getInteractionPipelineTools(): ToolDefinition[] {
 				},
 				required: ["interactionId", "overallRating"],
 			},
-			handler: async (input: { interactionId: number; overallRating: number }, _ctx: ToolContext) => {
+			handler: async (args: unknown, _ctx: ToolContext): Promise<JsonValue> => {
+				const input = args as { interactionId: number; overallRating: number };
 				return persistRating({ interactionId: input.interactionId, overallRating: input.overallRating });
 			},
 		},
@@ -108,10 +108,8 @@ export function getInteractionPipelineTools(): ToolDefinition[] {
 				},
 				required: ["interactionId", "flags"],
 			},
-			handler: async (
-				input: { interactionId: number; salespersonId: number | null; flags: any[]; flagRoleplays?: any[] },
-				_ctx: ToolContext,
-			) => {
+			handler: async (args: unknown, _ctx: ToolContext): Promise<JsonValue> => {
+				const input = args as { interactionId: number; salespersonId: number | null; flags: any[]; flagRoleplays?: any[] };
 				return persistFlags({
 					interactionId: input.interactionId,
 					salespersonId: input.salespersonId ?? null,
@@ -132,7 +130,8 @@ export function getInteractionPipelineTools(): ToolDefinition[] {
 				},
 				required: ["interactionId", "companyId", "extraction"],
 			},
-			handler: async (input: { interactionId: number; companyId: number; extraction: any }, _ctx: ToolContext) => {
+			handler: async (args: unknown, _ctx: ToolContext): Promise<JsonValue> => {
+				const input = args as { interactionId: number; companyId: number; extraction: any };
 				return persistExtraction({ interactionId: input.interactionId, companyId: input.companyId, extraction: input.extraction });
 			},
 		},
@@ -148,7 +147,8 @@ export function getInteractionPipelineTools(): ToolDefinition[] {
 				},
 				required: ["interactionId", "companyId", "persona"],
 			},
-			handler: async (input: { interactionId: number; companyId: number; persona: any }, _ctx: ToolContext) => {
+			handler: async (args: unknown, _ctx: ToolContext): Promise<JsonValue> => {
+				const input = args as { interactionId: number; companyId: number; persona: any };
 				return persistPersona({ interactionId: input.interactionId, companyId: input.companyId, persona: input.persona });
 			},
 		},

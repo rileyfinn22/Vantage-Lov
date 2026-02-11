@@ -164,7 +164,7 @@ export function MediaPlayer({
     const blobUrlRef = useRef<string | null>(null);
 
     const isVideo = mimeType?.startsWith('video/') ?? false;
-    const { data: mediaUrl, isLoading: urlLoading, refetch: refetchMediaUrl } = useAudioDownloadUrl(fileId, shouldLoadMedia);
+    const { data: mediaUrl, isLoading: urlLoading, refetch: refetchMediaUrl } = useAudioDownloadUrl(fileId, shouldLoadMedia, mimeType);
 
     useEffect(() => {
         if (mediaUrl?.startsWith('blob:')) {
@@ -210,7 +210,7 @@ export function MediaPlayer({
             <div className="bg-base-200 rounded-xl p-6">
                 <div className="flex flex-col items-center gap-3">
                     <span className="loading loading-spinner loading-md text-primary" />
-                    <div className="text-sm text-base-content/60">Loading audio...</div>
+                    <div className="text-sm text-base-content/60">Loading {isVideo ? 'video' : 'audio'}...</div>
                 </div>
             </div>
         );
@@ -254,10 +254,19 @@ export function MediaPlayer({
     if (isVideo && mediaUrl) {
         return (
             <div className="space-y-4">
-                <div className="relative rounded-xl overflow-hidden bg-black shadow-lg">
-                    <video ref={(el) => player.bindMediaElement(el)} className="w-full" controls src={mediaUrl} preload="metadata">
+                <div
+                    className="relative rounded-xl overflow-hidden bg-black shadow-lg cursor-pointer"
+                    onClick={player.togglePlayPause}
+                >
+                    <video ref={(el) => player.bindMediaElement(el)} className="w-full" src={mediaUrl} preload="metadata">
                         <track kind="captions" />
                     </video>
+                    {/* Play/Pause overlay */}
+                    <div className={`absolute inset-0 flex items-center justify-center transition-opacity ${player.isPlaying ? 'opacity-0 hover:opacity-100' : 'opacity-100'}`}>
+                        <div className="bg-black/50 rounded-full p-3">
+                            {player.isPlaying ? <Pause className="w-8 h-8 text-white" /> : <Play className="w-8 h-8 text-white ml-0.5" />}
+                        </div>
+                    </div>
                 </div>
 
                 {/* Timeline with flags */}

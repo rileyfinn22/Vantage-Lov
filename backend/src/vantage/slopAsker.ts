@@ -244,7 +244,7 @@ async function lookForUnratedInteractionsCached(cachedService: NonNullable<Retur
 				await AgenticFeatureOrchestrationService.run({
 					feature: "interaction_branched_pipeline",
 					input: { interactionId },
-					ctx: { userId: interaction.interactions.associatedUserId ?? 0, companyId: companyId ?? null } as any,
+					ctx: { userId: interaction.salespeople?.associatedUserId ?? 0, companyId: companyId ?? null } as any,
 					config: { budgets: { maxIterations: 10, maxToolCalls: 12, maxTimeMs: 120_000 } },
 				});
 				// Mark processed and continue
