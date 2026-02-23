@@ -7,95 +7,194 @@
  * Generate battle card from an objection pattern
  */
 export function battleCardFromObjectionPrompt() {
-	return `You are an expert sales strategist creating a tactical battle card for handling a common objection.
+	return `# Battle Card Generation Prompt
 
-## OBJECTION DETAILS
+## Executive Overview
 
-Title: {{OBJECTION_TITLE}}
-Description: {{OBJECTION_DESCRIPTION}}
-Frequency: {{FREQUENCY}}% of calls
-Sales Phase: {{SALES_PHASE}}
-Average Effectiveness of Current Responses: {{CURRENT_EFFECTIVENESS}}
+You are an expert sales strategist creating tactical battle cards that sales reps can use to handle common objections and capitalize on prospect pain points. A battle card isn't a script—it's a thinking tool that helps reps understand what's really happening, why the prospect feels that way, and how to respond with genuine business understanding.
 
-## EXAMPLE INSTANCES FROM CALLS
-{{EXAMPLE_INSTANCES}}
+Think of yourself as a senior sales manager distilling years of success patterns into teachable moments.
 
-## TASK
+---
 
-Create a battle card that sales reps can use to handle this objection effectively.
+## BATTLE CARD FROM OBJECTION PATTERN
 
-## OUTPUT FORMAT
+### Input Data
 
-Return valid JSON:
+- **Objection Title**: {{OBJECTION_TITLE}}
+- **Objection Description**: {{OBJECTION_DESCRIPTION}}
+- **Frequency**: {{FREQUENCY}}% of calls
+- **Sales Phase**: {{SALES_PHASE}}
+- **Current Effectiveness**: {{CURRENT_EFFECTIVENESS}}% of reps handle this well
+- **Example Instances**: {{EXAMPLE_INSTANCES}}
+
+### Your Task
+
+Create a tactical battle card that helps reps handle this specific objection effectively by understanding what's really happening beneath the surface.
+
+### Output Structure
+
+\`\`\`json
 {
   "title": "Short, memorable title (3-5 words)",
-  "challenge": "1-2 sentence description of the challenge",
-  "strategy": "High-level approach to handle this (2-3 sentences)",
+  "challenge": "1-2 sentence description of the challenge when this objection comes up",
+  "strategy": "High-level approach to handle this (2-3 sentences) - NOT a tactic, but a mindset shift",
   "approach": [
-    "First step/technique to use",
-    "Second step/technique to use",
-    "Third step/technique to use"
+    "First step/technique - what to do first",
+    "Second step/technique - the middle move",
+    "Third step/technique - how to transition forward"
   ],
-  "script": "Example script/response (2-4 sentences) that sounds natural and conversational",
+  "script": "Example response (2-4 sentences) that sounds natural and conversational",
   "nextStep": "Recommended action after handling the objection",
-  "difficultyLevel": 1-5 (1=easy to handle, 5=requires advanced skill)
+  "difficultyLevel": 1-5
 }
+\`\`\`
 
-## GUIDELINES
+### Guidelines
 
-1. Make the script sound NATURAL, not salesy or corporate
-2. Focus on understanding the prospect's concern, not just overcoming it
-3. Include a value bridge - connect back to their specific needs/pain
-4. The approach should be actionable and specific, not generic advice
-5. Consider the sales phase - discovery objections need different handling than closing objections`;
+**On the Challenge:**
+- Describe what's actually happening when this objection comes up
+- What's the prospect really concerned about (usually different from what they say)
+- Why is this concern legitimate?
+
+**On the Strategy:**
+- Don't write "how to overcome the objection"—write how to genuinely understand and address it
+- Focus on understanding the prospect's real concern
+- Include a value bridge back to their specific needs
+
+**On the Approach:**
+- Step 1: Usually "Acknowledge the concern authentically" (not "acknowledge then pivot to your pitch")
+- Step 2: Usually "Ask a diagnostic question" or "Quantify the impact"
+- Step 3: Usually "Position the value" or "Move to next step"
+- Make each step actionable and specific to this objection
+
+**On the Script:**
+- Sound like a human, not a salesperson
+- Use natural language (contractions, shorter sentences)
+- Include listening language ("I hear you," "That makes sense")
+- Focus on understanding, not overcoming
+- Example format: "I completely understand—[acknowledge their concern specifically]. Can I ask you something? [diagnostic question]..."
+
+**On Difficulty Level:**
+- 1 = Easy, most reps handle naturally
+- 2 = Straightforward with some finesse
+- 3 = Moderate difficulty, needs practice
+- 4 = Advanced technique
+- 5 = Expert-level, rare to see`;
 }
 
 /**
  * Generate battle card from a pain point pattern
  */
 export function battleCardFromPainPointPrompt() {
-	return `You are an expert sales strategist creating a tactical battle card for capitalizing on a common prospect pain point.
+	return `# Battle Card Generation Prompt
 
-## PAIN POINT DETAILS
+## Executive Overview
 
-Title: {{PAIN_POINT_TITLE}}
-Description: {{PAIN_POINT_DESCRIPTION}}
-Frequency: {{FREQUENCY}}% of prospects experience this
-Sales Phase: {{SALES_PHASE}}
-Severity: {{SEVERITY}}
-Current Capitalization Rate: {{CAPITALIZATION_RATE}}%
+You are an expert sales strategist creating tactical battle cards that sales reps can use to handle common objections and capitalize on prospect pain points. A battle card isn't a script—it's a thinking tool that helps reps understand what's really happening, why the prospect feels that way, and how to respond with genuine business understanding.
 
-## EXAMPLE INSTANCES FROM CALLS
-{{EXAMPLE_INSTANCES}}
+Think of yourself as a senior sales manager distilling years of success patterns into teachable moments.
 
-## TASK
+---
 
-Create a battle card that sales reps can use to effectively leverage this pain point to advance the sale.
+## BATTLE CARD FROM PAIN POINT PATTERN
 
-## OUTPUT FORMAT
+### Input Data
 
-Return valid JSON:
+- **Pain Point Title**: {{PAIN_POINT_TITLE}}
+- **Pain Point Description**: {{PAIN_POINT_DESCRIPTION}}
+- **Frequency**: {{FREQUENCY}}% of prospects experience this
+- **Sales Phase**: {{SALES_PHASE}}
+- **Severity**: {{SEVERITY}} (1-10)
+- **Current Capitalization Rate**: {{CAPITALIZATION_RATE}}% (% of reps who leverage this)
+- **Example Instances**: {{EXAMPLE_INSTANCES}}
+
+### Your Task
+
+Create a tactical battle card that helps reps effectively leverage this pain point to advance the sale. The key is helping them understand the pain more deeply than the prospect has articulated it.
+
+### Output Structure
+
+\`\`\`json
 {
   "title": "Short, memorable title (3-5 words)",
-  "challenge": "1-2 sentence description of the pain point and why it matters",
-  "strategy": "High-level approach to leverage this pain (2-3 sentences)",
+  "challenge": "1-2 sentence description of the pain point and why it matters to this buyer",
+  "strategy": "High-level approach to leverage this pain (2-3 sentences) - how to help them see it clearly",
   "approach": [
     "First step - how to uncover/validate the pain",
-    "Second step - how to quantify the impact",
+    "Second step - how to quantify the business impact",
     "Third step - how to connect to your solution"
   ],
-  "script": "Example discovery questions and positioning (2-4 sentences)",
-  "nextStep": "How to transition from pain acknowledgment to solution",
-  "difficultyLevel": 1-5 (1=straightforward, 5=requires nuanced handling)
+  "script": "Example discovery questions and positioning (2-4 sentences) - conversational, consultative",
+  "nextStep": "How to transition from pain acknowledgment to exploring solutions",
+  "difficultyLevel": 1-5
 }
+\`\`\`
 
-## GUIDELINES
+### Guidelines
 
-1. Focus on UNDERSTANDING the pain deeply, not just mentioning it
-2. Include questions that quantify the impact (time, money, risk)
-3. The script should feel consultative, not opportunistic
-4. Connect the pain to outcomes they care about
-5. Make the transition to solution feel natural, not forced`;
+**On the Challenge:**
+- Describe the pain in business terms (not product terms)
+- What impact does this have on their revenue, team, operations?
+- Why hasn't this been solved yet?
+
+**On the Strategy:**
+- Don't write "how to sell your solution"—write how to help them SEE the pain clearly
+- Be consultative, not opportunistic
+- Focus on understanding depth
+
+**On the Approach:**
+- Step 1: "Ask diagnostic questions that uncover the pain" (or validate if they've mentioned it)
+- Step 2: "Quantify the impact" (time, money, risk, opportunity cost)
+- Step 3: "Position how solutions typically address this" (doesn't have to be your solution)
+
+**On the Script:**
+- Use discovery questions, not positioning statements
+- Focus on understanding their specific situation
+- Examples: "How much time is your team spending on that?" "When did this become a problem?" "What's the cost of that inefficiency?"
+- Sound consultative, not like you're trying to close
+
+**On Difficulty Level:**
+- 1 = Straightforward pain that's easy to uncover
+- 2 = Pain that exists but prospect hasn't articulated
+- 3 = Pain that requires sophisticated discovery to surface
+- 4 = Pain that requires emotional/political understanding
+- 5 = Pain that requires deep industry knowledge and navigation of internal politics
+
+---
+
+## COMPANY-SPECIFIC CONTEXT
+
+{{COMPANY_CONTEXT}}
+
+---
+
+## COMMON MISTAKES TO AVOID
+
+**DON'T**: Write scripts that sound like pitches
+**DO**: Write conversational language that sounds like consultants
+
+**DON'T**: Write "ways to overcome the objection"
+**DO**: Write how to genuinely address the concern
+
+**DON'T**: Jump from problem to solution in one step
+**DO**: Use the approach to show the thinking progression
+
+**DON'T**: Make difficulty level generic
+**DO**: Rate based on how much skill and finesse it requires
+
+---
+
+## QUALITY CHECK
+
+Before submitting a battle card, ask:
+- Would a senior rep in my company find this useful?
+- Does the script sound like how our best reps actually talk?
+- Does the approach show genuine problem-solving, not tactics?
+- Is the difficulty level accurate?
+- Would this help reps have better conversations?
+
+If yes to all—you've nailed it.`;
 }
 
 /**

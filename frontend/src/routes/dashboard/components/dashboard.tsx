@@ -46,6 +46,7 @@ export function Dashboard({ leaderboard, star, salesDetails, me, salesError, hov
     const { data: flagsData } = usePaginatedFlags(salespersonId ? String(salespersonId) : '', 5);
     const currentFlags = flagsData?.flags ?? [];
     const incompleteFlags = currentFlags.filter((flag: any) => !flag.complete);
+    const totalIncompleteFlags = flagsData?.pagination?.total ?? incompleteFlags.length;
 
     // Get skills summary for the displayed salesperson
     const { data: skillsSummary } = useSkillsSummary(salespersonId ? String(salespersonId) : '');
@@ -123,11 +124,10 @@ export function Dashboard({ leaderboard, star, salesDetails, me, salesError, hov
                                                         focusSales(String(entry.id));
                                                     }
                                                 }}
-                                                className={`flex items-center justify-between p-3 cursor-pointer transition-all duration-200 border-b border-base-300/50 last:border-b-0 ${
-                                                    isSelected
-                                                        ? 'bg-primary/10 border-l-4 border-l-primary shadow-sm'
-                                                        : 'hover:bg-base-200/70'
-                                                }`}
+                                                className={`flex items-center justify-between p-3 cursor-pointer transition-all duration-200 border-b border-base-300/50 last:border-b-0 ${isSelected
+                                                    ? 'bg-primary/10 border-l-4 border-l-primary shadow-sm'
+                                                    : 'hover:bg-base-200/70'
+                                                    }`}
                                             >
                                                 <div className="flex items-center gap-3 min-w-0 flex-1">
                                                     {/* Rank Badge */}
@@ -226,11 +226,11 @@ export function Dashboard({ leaderboard, star, salesDetails, me, salesError, hov
 
                                         {/* Task Indicators */}
                                         <div className="flex items-center gap-3 text-xs pt-1">
-                                            {incompleteFlags.length > 0 && (
+                                            {totalIncompleteFlags > 0 && (
                                                 <div className="flex items-center gap-1 text-error">
                                                     <FlagIcon className="h-3 w-3" />
                                                     <span>
-                                                        {incompleteFlags.length} flag{incompleteFlags.length !== 1 ? 's' : ''}
+                                                        {totalIncompleteFlags} flag{totalIncompleteFlags !== 1 ? 's' : ''}
                                                     </span>
                                                 </div>
                                             )}
@@ -309,15 +309,14 @@ export function Dashboard({ leaderboard, star, salesDetails, me, salesError, hov
                                             <div key={skill.label} className="flex items-center justify-between p-2 bg-accent/10 rounded">
                                                 <span className="text-xs truncate">{skill.label}</span>
                                                 <span
-                                                    className={`text-xs font-semibold px-1.5 py-0.5 rounded ${
-                                                        skill.score === null
-                                                            ? 'bg-base-300 text-base-content/50'
-                                                            : skill.score >= 8
-                                                              ? 'bg-success/20 text-success'
-                                                              : skill.score >= 6
+                                                    className={`text-xs font-semibold px-1.5 py-0.5 rounded ${skill.score === null
+                                                        ? 'bg-base-300 text-base-content/50'
+                                                        : skill.score >= 8
+                                                            ? 'bg-success/20 text-success'
+                                                            : skill.score >= 6
                                                                 ? 'bg-warning/20 text-warning'
                                                                 : 'bg-error/20 text-error'
-                                                    }`}
+                                                        }`}
                                                 >
                                                     {skill.score !== null ? `${Math.round(skill.score)}/10` : 'N/A'}
                                                 </span>
@@ -386,13 +385,13 @@ export function Dashboard({ leaderboard, star, salesDetails, me, salesError, hov
                                 <FlagIcon className="h-5 w-5 text-error" />
                                 Training Tasks
                             </CardTitle>
-                            {incompleteFlags.length > 0 && (
+                            {totalIncompleteFlags > 0 && (
                                 <span className="badge badge-error badge-sm gap-1">
                                     <span className="relative flex h-2 w-2">
                                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-error-content opacity-75" />
                                         <span className="relative inline-flex rounded-full h-2 w-2 bg-error-content" />
                                     </span>
-                                    {incompleteFlags.length} open
+                                    {totalIncompleteFlags} open
                                 </span>
                             )}
                         </div>
@@ -461,7 +460,7 @@ export function Dashboard({ leaderboard, star, salesDetails, me, salesError, hov
                                         className="btn btn-ghost btn-sm w-full border border-base-300 hover:border-primary/30"
                                         onClick={() => navigate(`/salesperson/${salespersonId}`)}
                                     >
-                                        View all {currentFlags.length} tasks
+                                        View all {totalIncompleteFlags} tasks
                                         <ChevronRight className="h-4 w-4" />
                                     </button>
                                 )}

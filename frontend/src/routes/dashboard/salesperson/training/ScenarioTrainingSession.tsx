@@ -119,12 +119,21 @@ export function ScenarioTrainingSession() {
     }, [scenarioData, sessionState, isReviewMode]);
 
     const {
+        mutate: prewarmSession,
         mutateAsync: startSession,
         data: sessionData,
         isPending: isStartingSession,
         error: sessionError,
         reset: resetMutation,
     } = useStartScenarioSession(scenarioId);
+
+    // Pre-warm the session as soon as scenario data loads so the user doesn't wait on click
+    useEffect(() => {
+        if (scenarioData && sessionState === 'pre-session' && !isReviewMode && !sessionData && !isStartingSession) {
+            prewarmSession();
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [scenarioData?.scenario?.id, sessionState, isReviewMode]);
 
     // Timer effect for active sessions
     useEffect(() => {
@@ -151,7 +160,9 @@ export function ScenarioTrainingSession() {
 
     const handleStartSession = async () => {
         try {
-            await startSession();
+            if (!sessionData) {
+                await startSession();
+            }
             setSessionState('active');
             setSessionStartTime(Date.now());
         } catch (err) {
@@ -167,11 +178,11 @@ export function ScenarioTrainingSession() {
     };
 
     const handleRetry = () => {
+        resetMutation();
         setSessionState('pre-session');
         setCompletedObjectives(new Set());
         setSessionStartTime(null);
         setSessionDuration('0:00');
-        resetMutation();
     };
 
     const handleViewAssessment = () => {
@@ -514,12 +525,12 @@ export function ScenarioTrainingSession() {
                             type="button"
                             className="btn btn-primary btn-lg w-full gap-3 group transition-all duration-300 hover:scale-[1.02] hover:shadow-lg"
                             onClick={handleStartSession}
-                            disabled={isStartingSession}
+                            disabled={isStartingSession && !sessionData}
                         >
-                            {isStartingSession ? (
+                            {isStartingSession && !sessionData ? (
                                 <>
                                     <span className="loading loading-spinner loading-sm" />
-                                    Preparing session...
+                                    Getting ready...
                                 </>
                             ) : (
                                 <>

@@ -160,7 +160,13 @@ const InteractionFiles = ({ interactionId, bigfiles, interaction }: InteractionF
                     </div>
                 )}
 
-                <FileUpload interactionId={interactionId} onUploadComplete={() => {}} existingFiles={files} />
+                <FileUpload
+                    interactionId={interactionId}
+                    onUploadComplete={() => {
+                        queryClient.invalidateQueries({ queryKey: ['admin'] });
+                    }}
+                    existingFiles={files}
+                />
             </div>
 
             {/* Show transcript if available - from interaction */}

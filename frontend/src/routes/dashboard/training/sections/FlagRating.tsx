@@ -50,7 +50,7 @@ export function FlagRating({ flagId, currentRating, hasReport }: FlagRatingProps
             return response.json();
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['flag', flagId] });
+            queryClient.invalidateQueries({ queryKey: ['flag', flagId.toString()] });
             queryClient.invalidateQueries({ queryKey: ['flags'] });
         },
     });
@@ -65,7 +65,7 @@ export function FlagRating({ flagId, currentRating, hasReport }: FlagRatingProps
             return response.json();
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['flag', flagId] });
+            queryClient.invalidateQueries({ queryKey: ['flag', flagId.toString()] });
             queryClient.invalidateQueries({ queryKey: ['flags'] });
             setShowReportForm(false);
             setDetails('');

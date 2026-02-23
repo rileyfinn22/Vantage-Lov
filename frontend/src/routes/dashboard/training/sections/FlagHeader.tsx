@@ -64,14 +64,7 @@ export function FlagHeader({ flagData, salespersonData, relatedInteraction, curr
                                     : (prospectName ?? prospectCompany)}
                             </div>
                         )}
-                        <div className="flex items-center gap-3 mb-2">
-                            <h1 className="text-3xl font-bold">{getBriefFlagTitle(flagData)}</h1>
-                            {/* Severity Badge */}
-                            <div className={`badge ${severity.class} gap-1`}>
-                                <SeverityIcon className="w-3 h-3" />
-                                {severity.label}
-                            </div>
-                        </div>
+                        <h1 className="text-3xl font-bold mb-2">{getBriefFlagTitle(flagData)}</h1>
                         <p className="text-sm text-base-content/70 mb-3">
                             {salespersonData?.salesperson?.firstName} {salespersonData?.salesperson?.lastName} • Created:{' '}
                             {formatDateShort(flagData.createdAt) || 'Unknown'}
@@ -95,6 +88,11 @@ export function FlagHeader({ flagData, salespersonData, relatedInteraction, curr
                     </div>
 
                     <NavigationControls>
+                        {/* Severity Badge */}
+                        <div className={`badge ${severity.class} gap-1 whitespace-nowrap`}>
+                            <SeverityIcon className="w-3 h-3" />
+                            {severity.label}
+                        </div>
                         {/* Flag Navigation */}
                         <div className="flex items-center gap-2">
                             <button

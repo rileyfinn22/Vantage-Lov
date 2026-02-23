@@ -147,8 +147,9 @@ export function Salesperson({ id }: { id: string }) {
     // Calculate metrics for badges and progress
     const avgRating = avgScore;
     const incompleteFlags = currentFlags?.filter((flag: TrainingFlag) => !flag.complete) ?? [];
+    const totalIncompleteFlags = currentPagination?.total ?? incompleteFlags.length;
     const pendingBattleCards = battleCardAssignments?.length ?? 0;
-    const pendingTasksCount = incompleteFlags.length + pendingBattleCards;
+    const pendingTasksCount = totalIncompleteFlags + pendingBattleCards;
     const monthlyProgress = revenueMetrics?.monthlyQuota > 0 ? (revenueMetrics.mtdClosed / revenueMetrics.monthlyQuota) * 100 : 0;
     const quarterlyProgress = revenueMetrics?.quarterlyQuota > 0 ? (revenueMetrics.qtdClosed / revenueMetrics.quarterlyQuota) * 100 : 0;
 
@@ -186,10 +187,10 @@ export function Salesperson({ id }: { id: string }) {
                             </h1>
                             {pendingTasksCount > 0 ? (
                                 <div className="flex items-center gap-2">
-                                    {incompleteFlags.length > 0 && (
+                                    {totalIncompleteFlags > 0 && (
                                         <div className="flex items-center gap-1 px-2 py-1 bg-error/10 text-error rounded-full text-xs font-medium">
                                             <FlagIcon className="h-3 w-3" />
-                                            <span>{incompleteFlags.length} pending</span>
+                                            <span>{totalIncompleteFlags} pending</span>
                                         </div>
                                     )}
                                     {pendingBattleCards > 0 && (
@@ -226,7 +227,7 @@ export function Salesperson({ id }: { id: string }) {
                         <SectionHeader className="flex items-center gap-2">
                             <FlagIcon className="h-5 w-5 text-error" />
                             Flag Training
-                            {incompleteFlags.length > 0 && <span className="badge badge-error">{incompleteFlags.length} Active</span>}
+                            {totalIncompleteFlags > 0 && <span className="badge badge-error">{totalIncompleteFlags} Active</span>}
                         </SectionHeader>
 
                         <div className="space-y-4 max-h-[480px] overflow-y-auto pr-2">

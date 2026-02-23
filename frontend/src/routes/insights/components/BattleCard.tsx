@@ -41,8 +41,9 @@ export function BattleCard({ battleCard, showPracticeButton = true, scenarioId }
     };
 
     const handlePractice = () => {
-        if (scenarioId && salesData?.salesperson?.id) {
-            navigate(`/salesperson/${salesData.salesperson.id}/training/${scenarioId}`);
+        if (scenarioId) {
+            const salespersonId = salesData?.salesperson?.id ?? 0;
+            navigate(`/salesperson/${salespersonId}/training/${scenarioId}`);
         }
     };
 

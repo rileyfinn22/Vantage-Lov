@@ -188,6 +188,14 @@ const app = new Hono<AuthVariable<false>>()
 					})
 					.returning();
 
+				// If uploading to an existing interaction, reset it so the processor picks it up again
+				if (interactionId) {
+					await db
+						.update(schema.interactions)
+						.set({ processedStatus: "unprocessed", v1_raw_google_diarized: null, processedAt: null })
+						.where(eq(schema.interactions.id, finalInteractionId));
+				}
+
 				// Clean up tracking
 				activeUploads.delete(uploadId);
 
@@ -333,6 +341,14 @@ const app = new Hono<AuthVariable<false>>()
 					interactionId: finalInteractionId,
 				})
 				.returning();
+
+			// If uploading to an existing interaction, reset it so the processor picks it up again
+			if (interactionId) {
+				await db
+					.update(schema.interactions)
+					.set({ processedStatus: "unprocessed", v1_raw_google_diarized: null, processedAt: null })
+					.where(eq(schema.interactions.id, finalInteractionId));
+			}
 
 			logger.info({ filePath, fileSize: file.size, interactionId: finalInteractionId }, "File uploaded locally");
 

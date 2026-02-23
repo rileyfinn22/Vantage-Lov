@@ -41,8 +41,8 @@ class ElevenLabsConversational {
 				agent: {
 					prompt: {
 						prompt: systemPrompt,
-						// Use Gemini 2.0 Flash Lite for fastest response times
-						llm: "gemini-2.0-flash-lite",
+						// Use Gemini 2.5 Flash Lite for fastest response times
+						llm: "gemini-2.5-flash-lite",
 					},
 					firstMessage,
 					language: "en",

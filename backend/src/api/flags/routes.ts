@@ -4,9 +4,9 @@ import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import * as schema from "#/data/schema";
 import { db } from "#/data";
-import { eq, sql, and } from "drizzle-orm";
+import { eq, sql, and, isNull, isNotNull, desc } from "drizzle-orm";
 import { paginationQuerySchema, calculateOffset, createPaginationMetadata, type PaginationMetadata } from "#/validators/pagination";
-import { checkSalespersonAccess } from "#/middleware/authorization";
+import { checkSalespersonAccess, getUserCompanyId } from "#/middleware/authorization";
 import { requireAuth } from "#/middleware/auth";
 import { FeedbackAggregationService } from "#/services/FeedbackAggregationService";
 import { logger } from "#/lib/logger";
@@ -392,29 +392,40 @@ const app = new Hono<AuthVariable<false>>()
 	)
 	// GET /flags/manager/weekly-reviews - Get flags assigned for weekly manager review
 	.get("/manager/weekly-reviews", requireAuth, async (c) => {
-		const _currentUser = c.get("user");
+		const currentUser = c.get("user");
 
-		// For now, get last 5 flags (simple implementation)
-		// Later this will be enhanced with actual weekly assignment logic
-		const allFlags = await db.select().from(schema.flags).limit(100);
+		const companyId = await getUserCompanyId(currentUser.id);
+		if (!companyId) {
+			return c.json({ flags: [] });
+		}
 
-		// Filter to those without weekly review status
-		const flags = allFlags.filter((flag) => flag.weeklyReviewStatus === null).slice(0, 5);
+		const rows = await db
+			.select({ flag: schema.flags })
+			.from(schema.flags)
+			.innerJoin(schema.salespeople, eq(schema.flags.associatedSalespersonId, schema.salespeople.id))
+			.where(and(eq(schema.salespeople.companyId, companyId), isNull(schema.flags.weeklyReviewStatus)))
+			.orderBy(desc(schema.flags.createdAt))
+			.limit(50);
 
-		return c.json({ flags });
+		return c.json({ flags: rows.map((r) => r.flag) });
 	})
 	// GET /flags/manager/bad-reports - Get all reported bad flags for manager review
 	.get("/manager/bad-reports", requireAuth, async (c) => {
-		const _currentUser = c.get("user");
+		const currentUser = c.get("user");
 
-		// Get all flags with pending bad flag reports
-		// In a real implementation, this would filter by company/team access
-		const flags = await db.select().from(schema.flags).limit(100); // Get recent flags
+		const companyId = await getUserCompanyId(currentUser.id);
+		if (!companyId) {
+			return c.json({ flags: [] });
+		}
 
-		// Filter to only those with bad flag reports
-		const flagsWithReports = flags.filter((flag) => flag.badFlagReport !== null);
+		const rows = await db
+			.select({ flag: schema.flags })
+			.from(schema.flags)
+			.innerJoin(schema.salespeople, eq(schema.flags.associatedSalespersonId, schema.salespeople.id))
+			.where(and(eq(schema.salespeople.companyId, companyId), isNotNull(schema.flags.badFlagReport)))
+			.orderBy(desc(schema.flags.createdAt));
 
-		return c.json({ flags: flagsWithReports });
+		return c.json({ flags: rows.map((r) => r.flag) });
 	});
 
 export default app;

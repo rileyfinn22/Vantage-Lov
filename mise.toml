@@ -50,6 +50,11 @@ clean = [
     "cd backend && rm -rf node_modules",
 ]
 
+[tasks.deploy]
+description = "Deploy to Fly.io"
+run = "flyctl deploy"
+alias = "fly"
+
 [tasks.d_build]
 
 description = "Docker build for gcloud sandbox environment"

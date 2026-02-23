@@ -460,8 +460,8 @@ const app = new Hono<AuthVariable<false>>()
 								? {
 										flag_title: flagData.flag_title ?? "",
 										what_happened: flagData.what_happened ?? "",
-										// prospect_quote and rep_quote can be derived from transcript_segment
-										prospect_quote: flagData.transcript_segment?.join("\n") ?? "",
+										// transcript_segment contains both speakers - don't use as prospect_quote
+										prospect_quote: "",
 										rep_quote: "",
 										what_went_wrong: flagData.revenue_impact ?? "",
 										better_response: betterResponseStr,

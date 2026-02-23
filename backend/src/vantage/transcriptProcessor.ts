@@ -1,9 +1,10 @@
 import { db } from "#/data";
 import * as schema from "#/data/schema";
-import { eq } from "drizzle-orm";
+import { eq, lt, and } from "drizzle-orm";
 import { createTranscriptionService } from "#/services/AudioTranscriptionService";
 import { validateTranscriptionResult } from "#/data/transcription-types";
 import { logger } from "#/lib/logger";
+import { TIMING } from "#/config";
 import { VideoProcessingService } from "#/services/VideoProcessingService";
 import { join } from "node:path";
 import { existsSync } from "node:fs";
@@ -122,6 +123,20 @@ async function processTranscript(
 
 export async function lookForUnprocessedFiles() {
 	try {
+		// Recover any interactions stuck in "processing" (e.g. after a server restart or crash)
+		const staleThreshold = new Date(Date.now() - TIMING.STALE_INTERACTION_THRESHOLD_MS);
+		const staleInteractions = await db
+			.select({ id: schema.interactions.id })
+			.from(schema.interactions)
+			.where(and(eq(schema.interactions.processedStatus, "processing"), lt(schema.interactions.createdAt, staleThreshold)));
+		if (staleInteractions.length > 0) {
+			await db
+				.update(schema.interactions)
+				.set({ processedStatus: "unprocessed" })
+				.where(and(eq(schema.interactions.processedStatus, "processing"), lt(schema.interactions.createdAt, staleThreshold)));
+			logger.warn({ count: staleInteractions.length, ids: staleInteractions.map((i: { id: number }) => i.id) }, "Reset stale processing interactions back to unprocessed");
+		}
+
 		// Find interactions with associated files that need processing using a join
 		const unprocessedWithFiles = await db
 			.select({

@@ -30,7 +30,7 @@ export function TrainingAssignmentModal({ isOpen, onClose, salespersonId, salesp
             await createAssignment.mutateAsync({
                 salespersonId,
                 skillName,
-                dueDate: dueDate || undefined,
+                dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
                 priority,
                 notes: notes || undefined,
             });

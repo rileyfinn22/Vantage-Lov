@@ -45,6 +45,12 @@ export function useInteractionsWithRelations({
         },
         // Keep previous data while fetching new page
         placeholderData: (previousData) => previousData,
-        refetchInterval: ({ state: { data } }) => data?.data.some((d) => d.processedStatus === 'processing') && 2_000,
+        refetchInterval: ({ state: { data } }) =>
+            data?.data.some(
+                (d: InteractionWithRelationsAPI) =>
+                    d.processedStatus === 'processing' || d.processedStatus === 'unprocessed',
+            )
+                ? 10_000
+                : false,
     });
 }

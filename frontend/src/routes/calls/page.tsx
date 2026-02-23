@@ -317,7 +317,7 @@ function CallDetailView({ call, onClose }: { call: Call; onClose: () => void }) 
                                         </h4>
                                         <div className="flex flex-wrap gap-2">
                                             {callSummary.topicsDiscussed.map((topic, idx) => (
-                                                <span key={idx} className="badge badge-outline badge-sm">
+                                                <span key={idx} className="badge badge-outline badge-sm whitespace-normal h-auto text-left">
                                                     {topic}
                                                 </span>
                                             ))}

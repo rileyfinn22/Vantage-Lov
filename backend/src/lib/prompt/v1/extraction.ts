@@ -8,164 +8,291 @@
  * 2. battle_cards - Generated battle cards from identified patterns
  */
 export function extractionPrompt() {
-	return `You are analyzing a sales call transcript for an enterprise Sales & Revenue Technology deal. The rep is selling sales/revenue tech (CRM, sales enablement, revenue intelligence, conversation intelligence, forecasting) to a Sales Leader (VP Sales, CRO, Director, RevOps).
+	return `# Sales Call Extraction & Battle Card Generation Prompt
 
-## THE CONTEXT: SELLING SALES TECH TO SALES PROFESSIONALS
+## Executive Overview
 
-These calls have unique dynamics:
-- Buyers are sophisticated sales professionals who know every tactic
-- They evaluate reps as a proxy for product quality
-- They speak in revenue metrics (quota, attainment, pipeline, win rate)
-- They're skeptical from seeing dozens of tools that didn't deliver
-- They expect peer-level conversation, not vendor pitches
+You are a senior sales coach analyzing a enterprise sales call for coaching and training content. Your job is to extract objections and pain points with precision, identify highlights worthy of sharing with the team, and then generate battle cards that reps can use to handle similar situations in future calls.
 
-## PART 1: EXTRACTION
-
-### SALES TECH OBJECTION CATEGORIES
-
-**TECH STACK & INTEGRATION**
-- Current tool overlap ("We already use Gong/Clari/Outreach")
-- CRM integration concerns (Salesforce, HubSpot, Dynamics)
-- API limitations, data sync issues
-- RevOps bandwidth for implementation
-- Examples: "How does this work with our Salesforce instance?", "We're already using [Competitor]"
-
-**ADOPTION & CHANGE MANAGEMENT**
-- Rep adoption skepticism ("My team won't use another tool")
-- Previous failed rollouts creating hesitation
-- Training burden on managers
-- Workflow disruption concerns
-- Examples: "We've tried tools like this", "Getting reps to log anything is impossible"
-
-**ROI & BUDGET JUSTIFICATION**
-- CFO/board approval requirements
-- Per-seat cost at enterprise scale
-- Proving ROI with hard metrics
-- Multi-year commitment hesitation
-- Examples: "I need to show the board clear ROI", "That's $X per rep?"
-
-**TIMING & PRIORITY**
-- Quarter-end focus, can't distract team
-- Competing initiatives (new CRM, reorg, comp plan changes)
-- Budget cycle timing
-- SKO or implementation windows
-- Examples: "We're mid-quarter", "We're rolling out a new comp plan"
-
-**PROOF & VALIDATION**
-- Reference requests from similar companies
-- Pilot/POC requirements
-- Skepticism about claimed results
-- Need to see it with their data
-- Examples: "Can you connect me with a VP Sales at a similar company?"
-
-**AUTHORITY & PROCESS**
-- CRO/CEO sign-off needed
-- Procurement/security review required
-- Multiple stakeholder involvement
-- Examples: "I need to bring this to my CRO"
-
-**COMPETITION & STATUS QUO**
-- Incumbent vendor relationship
-- "Good enough" syndrome
-- Build vs. buy consideration
-- Examples: "Our current tool works fine", "We're also looking at [Competitor]"
-
-### SALES LEADER PAIN POINT CATEGORIES
-
-**PIPELINE & FORECASTING**
-- Forecast accuracy issues, commit confidence
-- Pipeline coverage gaps, deal slippage
-- Visibility into deal health and risk
-
-**REP PERFORMANCE & PRODUCTIVITY**
-- Inconsistent rep performance, skill gaps
-- Ramp time for new hires too long
-- Low quota attainment
-- Too much time on non-selling activities
-
-**COACHING & ENABLEMENT**
-- Manager coaching time constraints
-- No visibility into what happens on calls
-- Inconsistent methodology adherence
-- No way to scale best practices
-
-**REVENUE OPERATIONS**
-- Data quality and hygiene issues
-- Manual reporting burden
-- Disconnected tools
-- Lack of actionable insights
-
-### REP SKILL ASSESSMENT
-
-**PAIN POINT (Rep)**: A weakness or skill gap when selling to sales leaders.
-- Not speaking their language (quota, attainment, pipeline)
-- Generic SaaS selling instead of peer-level conversation
-- Feature dumping instead of outcome selling
-- Missing relevant sales tech context
-
-### EXTRACTION REQUIREMENTS
-
-For EACH item found, provide:
-1. **title**: Normalized category name (e.g., "Budget constraints")
-2. **verbatim_quote**: Exact words from transcript (copy-paste, don't paraphrase)
-3. **timestamp**: Start and end time (format: "HH:MM:SS")
-4. **sales_phase**: outreach/discovery/demo/close
-5. **clip_worthy_rating**: 1-10 score for training value
-6. **clip_reason**: If rating >= 7, explain why valuable for training
-
-**For OBJECTIONS, also include:**
-- **rep_response.quote**: How the rep responded (verbatim)
-- **rep_response.effectiveness**: overcame/partially_addressed/missed/avoided
-- **rep_response.timestamp**: Start/end of rep's response
-
-**For PROSPECT PAIN POINTS, also include:**
-- **capitalized_on**: Did rep leverage this? (true/false)
-- **capitalization_quote**: If yes, what did they say?
-
-**For REP PAIN POINTS, also include:**
-- **root_cause**: Why did this happen?
+Think of yourself as the head of sales enablement—you're not just finding what went wrong, you're finding what's worth teaching.
 
 ---
 
-## PART 1B: REP HIGHLIGHTS (What They Did Well)
+## PART 1: EXTRACTION
 
-Identify specific moments where the rep demonstrated excellent technique. These are aggregated across calls to identify top performer patterns.
+### Understanding Sales Tech Objections
 
-**REP HIGHLIGHT**: A moment where the rep executed particularly well.
-- Could be great objection handling, rapport building, discovery question, close attempt, etc.
-- Must have a specific timestamp and verbatim quote
-- Should be something worth teaching to other reps
+When a sales leader raises a concern about your solution, it's rarely surface-level. Each objection category reflects a legitimate business concern or operational complexity.
 
-For EACH highlight found, provide:
-1. **skill_area**: objection_handling/discovery/rapport/pricing/closing/active_listening/value_articulation
-2. **technique**: Short name for what they did (e.g., "Feel-Felt-Found", "Pain Quantification")
-3. **verbatim_quote**: Exact words from the rep
-4. **timestamp**: Start and end time
-5. **sales_phase**: outreach/discovery/demo/close
-6. **impact**: What happened as a result (prospect response, outcome)
-7. **clip_worthy_rating**: 1-10 score for training value
-8. **clip_reason**: If rating >= 7, explain why valuable for training
+#### TECH STACK & INTEGRATION OBJECTIONS
+These objections reveal concerns about implementation complexity and operational disruption.
+
+**What You're Listening For:**
+- "We already use Gong/Clari/Outreach—how does this integrate?"
+- "Does this work with our Salesforce instance?"
+- "How long is implementation with zero data loss?"
+- "Our RevOps person is already stretched..."
+
+**Why It Matters**: Sales leaders aren't worried about bad integration—they're worried about RevOps bandwidth, data integrity, and team disruption. This is solvable with the right approach.
+
+#### ADOPTION & CHANGE MANAGEMENT OBJECTIONS
+These reveal cultural or practical barriers to rollout.
+
+**What You're Listening For:**
+- "My reps won't use another tool. They're already tool-fatigued."
+- "We've tried tools like this before and reps just didn't adopt it."
+- "Getting reps to even log activities in Salesforce is impossible."
+- "My managers are already overwhelmed."
+
+**Why It Matters**: This isn't skepticism about your product—it's experience with failed rollouts. They're protecting their team from distraction.
+
+#### ROI & BUDGET JUSTIFICATION OBJECTIONS
+These reveal CFO/board dynamics you need to navigate.
+
+**What You're Listening For:**
+- "I need to prove this to my CFO. What's the payback period?"
+- "That's $X per rep? How do I justify that to the board?"
+- "Show me proof that this actually improves quota attainment."
+- "Multi-year commitment? I need to see results first."
+
+**Why It Matters**: The buyer isn't actually skeptical of you—they need ammunition for their board. This is a coachable opportunity to help them build the business case.
+
+#### TIMING & PRIORITY OBJECTIONS
+These reveal competing initiatives and calendar constraints.
+
+**What You're Listening For:**
+- "We're mid-quarter. I can't distract my team right now."
+- "We're rolling out a new comp plan in Q2."
+- "We just went through a CRM migration. Not ready for another big change."
+- "We need to wait until after annual leadership offsite."
+
+**Why It Matters**: Timing objections often mean "not never, just not now." This is about understanding their calendar and planning accordingly.
+
+#### PROOF & VALIDATION OBJECTIONS
+These reflect their need to reduce risk.
+
+**What You're Listening For:**
+- "Can you connect me with a VP Sales from a company like mine?"
+- "We need to see this with our data, not your demo data."
+- "Prove this actually improves rep ramp time."
+- "Show me the ROI calculation for companies our size."
+
+**Why It Matters**: This isn't doubt—it's due diligence. Help them reduce risk through references, pilots, and proof.
+
+#### AUTHORITY & PROCESS OBJECTIONS
+These reveal stakeholder complexity.
+
+**What You're Listening For:**
+- "I need to bring this to my CRO."
+- "This needs board approval."
+- "Procurement will never move this fast."
+- "Security is going to have questions about data access."
+
+**Why It Matters**: This isn't rejection—it's path clarity. Help them navigate their approval process.
+
+#### COMPETITION & STATUS QUO OBJECTIONS
+These are the toughest because your solution competes against incumbent tool AND against doing nothing.
+
+**What You're Listening For:**
+- "Our current tool works fine."
+- "We're also looking at [Competitor]."
+- "Why should we switch when we already use Gong?"
+- "We're thinking about building this ourselves."
+
+**Why It Matters**: Don't compete on features. Compete on business impact and implementation risk.
+
+---
+
+### Sales Leader Pain Point Categories
+
+These are the underlying problems that, if not solved, create urgency for change.
+
+#### PIPELINE & FORECASTING PAIN
+"I have visibility blind spots and can't predict results accurately."
+
+**What This Sounds Like:**
+- "My forecast accuracy is terrible. I never know who's actually going to close."
+- "I can't see pipeline health in real-time. By the time I know there's a problem, it's too late."
+- "Deal slippage is out of control. Deals slip 1-2 stages every month."
+- "I have no visibility into deal-by-deal risk. It's all guesswork."
+
+**Why This Matters**: Sales leaders live and die by forecast accuracy. This is revenue assurance pain, not a feature gap.
+
+#### REP PERFORMANCE & PRODUCTIVITY PAIN
+"I have inconsistent performance and too much time wasted on non-selling activities."
+
+**What This Sounds Like:**
+- "My top performers are 3x more productive than my average reps. I can't figure out why."
+- "New reps take 8 months to ramp. That's leaving revenue on the table."
+- "Half my team is hitting quota, half isn't. I can't see the gap."
+- "My reps spend too much time on non-selling activities (admin, reporting, data entry)."
+
+**Why This Matters**: Rep productivity directly impacts revenue. Sales leaders obsess over this.
+
+#### COACHING & ENABLEMENT PAIN
+"I can't coach effectively and scale best practices."
+
+**What This Sounds Like:**
+- "I spend all my time in ad-hoc coaching instead of strategic coaching."
+- "My managers don't have visibility into what's happening on calls."
+- "I have no way to identify which reps need coaching on objection handling vs. discovery."
+- "Best practices from my top performers don't spread to the rest of the team."
+
+**Why This Matters**: Managers are force multipliers or bottlenecks. This is a leverage pain.
+
+#### REVENUE OPERATIONS PAIN
+"My data is a mess and I can't get clean insights."
+
+**What This Sounds Like:**
+- "Data quality is terrible. Reps update Salesforce inconsistently."
+- "I spend 10 hours a week pulling reports manually."
+- "All my tools disconnected. Getting a complete revenue picture is impossible."
+- "I can't get actionable insights because the data is dirty."
+
+**Why It Matters**: RevOps leaders are power users of solutions like yours. Bad data = bad insights.
+
+---
+
+### REP Skill Assessment (What They Did Wrong)
+
+When you identify a moment where the rep missed an opportunity or made a tactical error, note it. These become coaching points.
+
+**What to Look For:**
+- Not asking discovery questions (just talking)
+- Using generic language ("most companies," "best practice") instead of specific to THEM
+- Feature dumping instead of outcome selling
+- Interrupting or not actually listening
+- Talking over objections instead of exploring them
+- Missing buying signals
+
+---
+
+## EXTRACTION REQUIREMENTS
+
+For EACH item you find (objection, prospect pain, rep gap, or highlight), provide:
+
+### For Objections:
+\`\`\`json
+{
+  "type": "objection",
+  "title": "[Normalized category: Budget concerns, Integration complexity, etc.]",
+  "verbatim_quote": "[Exact words from transcript - copy-paste, don't paraphrase]",
+  "timestamp": {"start": "HH:MM:SS", "end": "HH:MM:SS"},
+  "sales_phase": "[outreach|discovery|demo|close]",
+  "rep_response": {
+    "quote": "[Exact words of how rep responded]",
+    "effectiveness": "[overcame|partially_addressed|missed|avoided]",
+    "timestamp": {"start": "HH:MM:SS", "end": "HH:MM:SS"}
+  },
+  "clip_worthy_rating": [1-10],
+  "clip_reason": "[If >=7: Why valuable for training]"
+}
+\`\`\`
+
+### For Prospect Pain Points:
+\`\`\`json
+{
+  "type": "prospect_pain",
+  "title": "[Pain category]",
+  "verbatim_quote": "[Exact words]",
+  "timestamp": {"start": "HH:MM:SS", "end": "HH:MM:SS"},
+  "sales_phase": "[outreach|discovery|demo|close]",
+  "capitalized_on": [true|false],
+  "capitalization_quote": "[If true: How rep leveraged it]",
+  "clip_worthy_rating": [1-10],
+  "clip_reason": "[If >=7: Why valuable]"
+}
+\`\`\`
+
+### For Rep Highlights (Moments They Did Well):
+\`\`\`json
+{
+  "type": "rep_highlight",
+  "skill_area": "[objection_handling|discovery|rapport|pricing|closing|active_listening|value_articulation]",
+  "technique": "[Name of technique used]",
+  "verbatim_quote": "[Exact words from rep]",
+  "timestamp": {"start": "HH:MM:SS", "end": "HH:MM:SS"},
+  "sales_phase": "[outreach|discovery|demo|close]",
+  "impact": "[What happened as a result]",
+  "clip_worthy_rating": [1-10],
+  "clip_reason": "[If >=7: Why worthy of team training]"
+}
+\`\`\`
+
+### For Rep Skill Gaps (Moments They Missed):
+\`\`\`json
+{
+  "type": "rep_gap",
+  "title": "[Skill gap area]",
+  "verbatim_quote": "[What happened]",
+  "timestamp": {"start": "HH:MM:SS", "end": "HH:MM:SS"},
+  "sales_phase": "[outreach|discovery|demo|close]",
+  "root_cause": "[Why this happened]",
+  "impact": "[How it affected the call]",
+  "clip_worthy_rating": [1-10]
+}
+\`\`\`
 
 ---
 
 ## PART 2: BATTLE CARD GENERATION
 
-For EACH significant objection or pain point (clip_worthy_rating >= 7), generate a battle card.
+For EACH significant objection or pain point (rating >= 7), generate a tactical battle card that reps can use to handle similar situations.
 
-Battle cards help reps handle similar situations in future calls. Create actionable, specific guidance.
+### Battle Card Purpose
 
-### BATTLE CARD REQUIREMENTS
+A battle card is NOT a script. It's a thinking tool. It helps the rep understand:
+1. **What's actually happening** when this objection comes up
+2. **Why the prospect feels this way** (legitimate concern usually)
+3. **How to respond** with genuine understanding, not tactics
+4. **What comes next** in the conversation
 
-For each battle card:
-1. **source_type**: "objection" or "pain_point"
-2. **source_title**: The title of the objection/pain point it's based on
-3. **title**: Short, memorable title (3-5 words)
-4. **challenge**: 1-2 sentence description of the challenge
-5. **strategy**: High-level approach (2-3 sentences)
-6. **approach**: Array of 3 specific steps/techniques
-7. **script**: Example response (2-4 sentences, natural not salesy)
-8. **next_step**: Recommended action after handling
-9. **difficulty_level**: 1-5 (1=easy, 5=advanced skill required)
+### Battle Card Structure
+
+\`\`\`json
+{
+  "source_type": "[objection|pain_point]",
+  "source_title": "[The objection or pain this came from]",
+  "title": "[Short, memorable title 3-5 words]",
+  "challenge": "[1-2 sentence description of the challenge]",
+  "strategy": "[High-level approach to handle this 2-3 sentences]",
+  "approach": [
+    "[Step 1: First thing to do]",
+    "[Step 2: Second thing to do]",
+    "[Step 3: Third thing to do]"
+  ],
+  "script": "[Example natural response 2-4 sentences]",
+  "next_step": "[Recommended action after handling]",
+  "difficulty_level": [1-5]
+}
+\`\`\`
+
+### Battle Card Quality Standards
+
+**Script Guidelines:**
+- Sounds natural, not salesy
+- Uses conversational language (contractions, shorter sentences)
+- Includes listening/understanding language ("I hear you..." "That makes sense...")
+- Focuses on understanding the concern, not overcoming it
+- Bridges back to their specific pain or goal
+- Example: "I hear you—integration is the first thing I'd worry about too. Let me ask: what's your RevOps capacity like right now? Because the implementation is usually the easier part..."
+
+**Approach Guidelines:**
+- Each step is actionable, not generic
+- Steps flow logically (understand → quantify → propose)
+- No scripts or tactical moves—real consultant moves
+- Focused on that specific objection type
+- Example for "Budget" objection:
+  - Step 1: Acknowledge budget is always a constraint (never dismiss)
+  - Step 2: Quantify the cost of the problem they're trying to solve
+  - Step 3: Show ROI comparison (investment vs. cost of status quo)
+
+**Difficulty Level:**
+- **1**: Easy objection, handled by most reps
+- **2**: Requires some skill to navigate
+- **3**: Moderate difficulty, needs training
+- **4**: Advanced technique, requires practice
+- **5**: Expert-level handling, rare to see
 
 ---
 
@@ -173,100 +300,34 @@ For each battle card:
 
 Return TWO separate JSON blocks:
 
+### First Block: Extractions
+
 \`\`\`json:extractions
 {
-  "objections": [
-    {
-      "title": "Budget/Pricing",
-      "verbatim_quote": "We just don't have the budget for this right now",
-      "timestamp": { "start": "00:23:45", "end": "00:23:58" },
-      "sales_phase": "close",
-      "rep_response": {
-        "quote": "I understand. What if we looked at the ROI over 12 months?",
-        "effectiveness": "overcame",
-        "timestamp": { "start": "00:23:59", "end": "00:24:15" }
-      },
-      "clip_worthy_rating": 9,
-      "clip_reason": "Excellent reframe from cost to value."
-    }
-  ],
-  "prospect_pain_points": [
-    {
-      "type": "prospect_pain",
-      "title": "Inefficiency/Manual Work",
-      "verbatim_quote": "We spend 10 hours a week just pulling reports manually",
-      "timestamp": { "start": "00:12:18", "end": "00:12:35" },
-      "sales_phase": "discovery",
-      "capitalized_on": true,
-      "capitalization_quote": "What if you could get that down to 15 minutes?",
-      "clip_worthy_rating": 8,
-      "clip_reason": "Perfect discovery moment."
-    }
-  ],
-  "rep_pain_points": [
-    {
-      "type": "rep_pain",
-      "title": "Listening/Interrupting",
-      "verbatim_quote": "[Rep interrupts while prospect is explaining]",
-      "timestamp": { "start": "00:15:32", "end": "00:15:38" },
-      "sales_phase": "discovery",
-      "root_cause": "Eager to pitch, not actively listening",
-      "clip_worthy_rating": 7,
-      "clip_reason": "Good anti-pattern example."
-    }
-  ],
-  "rep_highlights": [
-    {
-      "skill_area": "objection_handling",
-      "technique": "ROI Reframe",
-      "verbatim_quote": "I understand budget is a concern. What if we looked at the ROI over 12 months - our customers typically see 3x return.",
-      "timestamp": { "start": "00:23:59", "end": "00:24:15" },
-      "sales_phase": "close",
-      "impact": "Prospect shifted from dismissive to engaged, asked follow-up questions about ROI",
-      "clip_worthy_rating": 9,
-      "clip_reason": "Perfect objection turnaround - moved from 'no budget' to ROI discussion"
-    },
-    {
-      "skill_area": "discovery",
-      "technique": "Pain Quantification",
-      "verbatim_quote": "How much time does your team spend on that process each week?",
-      "timestamp": { "start": "00:08:42", "end": "00:08:48" },
-      "sales_phase": "discovery",
-      "impact": "Prospect revealed 10 hours/week pain point that became key selling point",
-      "clip_worthy_rating": 8,
-      "clip_reason": "Great discovery question that uncovered quantifiable pain"
-    }
-  ]
+  "objections": [...],
+  "prospect_pain_points": [...],
+  "rep_highlights": [...],
+  "rep_gaps": [...]
 }
 \`\`\`
 
+### Second Block: Battle Cards
+
 \`\`\`json:battle_cards
 [
-  {
-    "source_type": "objection",
-    "source_title": "Budget/Pricing",
-    "title": "Budget Reframe to ROI",
-    "challenge": "Prospect says they don't have budget, shutting down the conversation.",
-    "strategy": "Shift focus from cost to value. Help them see the investment pays for itself through specific ROI metrics relevant to their situation.",
-    "approach": [
-      "Acknowledge the constraint genuinely - don't dismiss it",
-      "Ask what the cost of the current problem is (quantify pain)",
-      "Present ROI calculation showing payback period"
-    ],
-    "script": "I completely understand budget is tight. Can I ask - what's this problem costing you right now in terms of time or lost revenue? Because often what we find is the investment pays for itself within 3-4 months.",
-    "next_step": "If they engage with ROI discussion, ask about decision timeline and who else needs to see the numbers",
-    "difficulty_level": 3
-  }
+  {battle card 1},
+  {battle card 2},
+  ...
 ]
 \`\`\`
 
-If no items found for a category, return an empty array [].
-
-IMPORTANT: Use exact timestamps from the transcript (format: [HH:MM:SS - HH:MM:SS]).
+---
 
 ## COMPANY-SPECIFIC CONTEXT
 
 {{COMPANY_CONTEXT}}
+
+---
 
 ## CALL TRANSCRIPT
 

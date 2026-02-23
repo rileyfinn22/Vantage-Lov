@@ -1,6 +1,6 @@
 import { db, computeRawInteractionText } from "#/data";
 import * as schema from "#/data/schema";
-import { eq, isNull, and, sql, notExists, lt } from "drizzle-orm";
+import { eq, and, notExists, lt } from "drizzle-orm";
 import z from "zod";
 import { trainingFlagPrompt, trainingSkillsPrompt, trainingBattleCardPrompt, trainingRoleplayPrompt } from "#/lib/prompt/v1";
 // Import system instructions from analysis-defaults (used for fallbacks)
@@ -528,26 +528,13 @@ async function lookForUnratedInteractionsCached(cachedService: NonNullable<Retur
 					})
 					.where(eq(schema.interactions.id, interactionId));
 
-				// Trigger battle card generation every 2 processed calls
+				// Trigger battle card generation after each processed call
 				if (companyId) {
-					try {
-						const processedCount = await db
-							.select({ count: schema.interactions.id })
-							.from(schema.interactions)
-							.innerJoin(schema.salespeople, eq(schema.interactions.salespersonId, schema.salespeople.id))
-							.where(and(eq(schema.salespeople.companyId, companyId), eq(schema.interactions.processedStatus, "processed")));
-
-						const totalProcessed = processedCount.length;
-						if (totalProcessed > 0 && totalProcessed % 2 === 0) {
-							logger.info({ companyId, totalProcessed }, "Triggering battle card generation (every 2 calls)");
-							// Run in background - don't block the main processing
-							autoGenerateBattleCardsForCompany(companyId).catch((error) => {
-								logger.error({ companyId, error }, "Failed to auto-generate battle cards");
-							});
-						}
-					} catch (error) {
-						logger.error({ companyId, error }, "Failed to check for battle card generation trigger");
-					}
+					logger.info({ companyId, interactionId }, "Triggering battle card generation after call analysis");
+					// Run in background - don't block the main processing
+					autoGenerateBattleCardsForCompany(companyId).catch((error) => {
+						logger.error({ companyId, error }, "Failed to auto-generate battle cards");
+					});
 				}
 			}
 
