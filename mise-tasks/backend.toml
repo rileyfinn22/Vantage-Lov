@@ -141,3 +141,18 @@ run = [
     "docker compose -f docker-compose.yaml -f docker-compose.deploy.yaml run --rm app pnpm drizzle-kit migrate",
     "docker compose -f docker-compose.yaml -f docker-compose.deploy.yaml run --rm app pnpm tsx utils/seedDatabaseUrl.ts",
 ]
+
+[test_pipeline]
+description = "Test the agentic interaction pipeline with a real interaction or transcript"
+run = "pnpm tsx scripts/test-agentic-pipeline.ts"
+dir = "backend"
+alias = "tp"
+raw = true
+env = { USE_PGLITE = "true", TENANT_NAME = "test" }
+
+[test_pipeline_list]
+description = "List available interactions for pipeline testing"
+run = "pnpm tsx scripts/test-agentic-pipeline.ts --list"
+dir = "backend"
+alias = "tpl"
+env = { USE_PGLITE = "true", TENANT_NAME = "test" }

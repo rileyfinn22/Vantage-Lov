@@ -14,6 +14,7 @@ import battleCardsRoutes from "#/api/battle-cards/routes";
 import agenticRoutes from "#/api/agentic/routes";
 import meetingPrepRoutes from "#/api/meeting-prep/routes";
 import crmRoutes from "#/api/crm/routes";
+import testingRoutes from "#/api/testing/routes";
 import { myUserHandler, healthHandler } from "#/handlers/api";
 import { logger } from "#/lib/logger";
 
@@ -62,6 +63,7 @@ const app = new Hono<AuthVariable<false>>()
 	.route("/api/battle-cards", battleCardsRoutes)
 	.route("/api/agentic", agenticRoutes)
 	.route("/api/meeting-prep", meetingPrepRoutes)
-	.route("/api/crm", crmRoutes);
+	.route("/api/crm", crmRoutes)
+	.route("/api/testing", testingRoutes);
 
 export default app;

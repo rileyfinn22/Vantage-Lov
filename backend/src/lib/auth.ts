@@ -17,6 +17,7 @@ if (process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test") {
 	trustedOrigins.push("http://localhost:5173");
 	trustedOrigins.push("http://localhost:3000");
 	trustedOrigins.push("http://localhost:5000");
+	trustedOrigins.push("http://localhost:5001");
 	trustedOrigins.push("http://localhost:5025");
 }
 

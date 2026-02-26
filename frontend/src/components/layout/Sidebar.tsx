@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLocation } from 'wouter';
-import { LayoutDashboard, TrendingUp, GraduationCap, Users, Phone, Flag, Settings, Upload, CalendarCheck } from 'lucide-react';
+import { LayoutDashboard, TrendingUp, GraduationCap, Users, Phone, Flag, Settings, Upload, CalendarCheck, FlaskConical } from 'lucide-react';
 
 interface NavItem {
     title: string;
@@ -20,7 +20,10 @@ const mainNavItems: NavItem[] = [
     { title: 'Flag Tuning', url: '/flag-tuning', icon: <Flag className="w-5 h-5" />, roles: ['manager'] },
 ];
 
-const adminNavItems: NavItem[] = [{ title: 'Admin Settings', url: '/admin', icon: <Settings className="w-5 h-5" />, roles: ['admin'] }];
+const adminNavItems: NavItem[] = [
+    { title: 'Admin Settings', url: '/admin', icon: <Settings className="w-5 h-5" />, roles: ['admin'] },
+    { title: 'Prompt Workbench', url: '/prompt-workbench', icon: <FlaskConical className="w-5 h-5" />, roles: ['admin'] },
+];
 
 interface SidebarProps {
     userRole?: string;

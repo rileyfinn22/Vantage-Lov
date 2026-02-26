@@ -19,6 +19,7 @@ import { FlagTuningPage } from '../flag-tuning/page';
 import { PrepListPage } from '../prep/page';
 import { NewPrepPage } from '../prep/NewPrepPage';
 import { PrepDetailPage } from '../prep/PrepDetailPage';
+import { PromptWorkbenchPage } from '../prompt-workbench/page';
 
 // Lazy load admin routes for code splitting
 const AdminRoutes = lazy(() => import('../admin/index'));
@@ -58,6 +59,7 @@ export default function SlopRoutes() {
                         <Route path="/calls" component={CallLibraryPage} />
                         <Route path="/upload-call" component={UploadCall} />
                         <Route path="/flag-tuning" component={FlagTuningPage} />
+                        <Route path="/prompt-workbench" component={PromptWorkbenchPage} />
                         <Route path="/prep" component={PrepListPage} />
                         <Route path="/prep/new" component={NewPrepPage} />
                         <Route path="/prep/:prepId">
