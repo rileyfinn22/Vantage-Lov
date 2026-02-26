@@ -1,0 +1,10 @@
+[env]
+# DOCKER_CONTEXT = "blog-sandbox"
+# KUBECONFIG = "{{ config_root }}/blog-sandbox.kubeconfig.yaml"
+# _.file = [".env.sandbox.yaml"]
+
+DB_HOST = "{{env.SANDBOX_DB_GCS_HOST}}" 
+DB_USER = "{{env.SANDBOX_DB_GCS_USER}}"
+DB_PASSWORD = "{{env.SANDBOX_DB_GCS_PASSWORD}}"
+DB_DATABASE = "sandbox-1"
+DABEARS = true

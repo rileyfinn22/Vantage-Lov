@@ -1,0 +1,46 @@
+name: vantage
+services:
+  app:
+    depends_on:
+      postgres:
+        condition: service_healthy
+    build:
+      context: .
+    networks:
+      - app
+    ports:
+      - "3003:3030"
+    environment:
+      DB_HOST: postgres
+      DB_USER: postgres
+      DB_PASSWORD: coconuts
+      DB_DATABASE: vantage
+      HOST: ${HOST:-localhost}
+      MISE_SOPS_AGE_KEY: ${MISE_SOPS_AGE_KEY:-NONE}
+      TENANT_NAME: ${TENANT_NAME:-coolify}
+
+  postgres:
+    image: postgres:17.6
+    networks:
+      - app
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: coconuts
+      POSTGRES_DB: vantage
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 1m
+      timeout: 2s
+      retries: 3
+      start_period: 8s
+      start_interval: 1s
+
+networks:
+  app:
+
+volumes:
+  pgdata:

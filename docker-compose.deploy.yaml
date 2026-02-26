@@ -1,0 +1,58 @@
+name: vantage
+services:
+  app:
+    depends_on:
+      postgres:
+        condition: service_healthy
+    build:
+      context: .
+      # target: final
+      # args:
+      # MISE_SOPS_AGE_KEY: ${MISE_SOPS_AGE_KEY}
+      # dockerfile: pnpm.Dockerfile
+    networks:
+      - app
+    ports:
+      - "3003:3030"
+    volumes:
+      - ./backend/uploads:/app/backend/uploads
+    # healthcheck:
+    #   test: ['CMD', 'curl', '-f', 'http://localhost:3030/health']
+    #   interval: 30s
+    #   timeout: 3s
+    #   retries: 3
+    #   start_period: 40s
+    environment:
+      DB_HOST: postgres
+      DB_USER: postgres
+      DB_PASSWORD: coconuts
+      DB_DATABASE: vantage
+      # DATABASE_URL: postgres://postgres:coconuts@postgres:5432/vantage
+      HOST: ${HOST:-localhost}
+      MISE_SOPS_AGE_KEY: ${MISE_SOPS_AGE_KEY:-NONE}
+      TENANT_NAME: alex-localhost
+  # caddy:
+  #   image: caddy:2
+  #   depends_on:
+  #     app:
+  #       condition: service_healthy
+  #   networks:
+  #     - app
+  #   ports:
+  #     - "80:80"
+  #   configs:
+  #     - caddyfile
+
+networks:
+  app:
+
+configs:
+  caddyfile:
+    content: |
+      ${HOST:-localhost} {
+        basic_auth {
+          vantage $$2a$$14$$8Uok2C1dbjbz1vauqOY7G.xDS7J3ToQdMg2tUq.KYNrIBjxqJ4bIm
+        }
+        reverse_proxy complete_app:3000
+        encode gzip
+      }
